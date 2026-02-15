@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = 'https://colegio-emanuel-1.onrender.com/api';
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('token');
@@ -9,6 +9,7 @@ async function request(path, options = {}) {
   };
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  
 
   if (res.status === 401 || res.status === 403) {
     localStorage.removeItem('token');

@@ -22,12 +22,12 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     const { username, password, role, full_name, dni, email, phone } = req.body;
     const hash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
-      'INSERT INTO users (username, password_hash, role, full_name, dni, email, phone) VALUES (?,?,?,?,?,?,?)',
+      'INSERT INTO users (username, password_hash, role, full_name, dni, email, phone) VALUES (?,?,?,?,?,?,?) RETURNING id',
       [username, hash, role, full_name, dni, email, phone]
     );
-    res.status(201).json({ id: result.insertId, username, role, full_name });
+    res.status(201).json({ id: result[0].id, username, role, full_name });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'El usuario ya existe' });
+    if (err.code === '23505') return res.status(409).json({ error: 'El usuario ya existe' });
     res.status(500).json({ error: 'Error del servidor' });
   }
 });
@@ -59,7 +59,7 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 
 router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
-    await pool.query('UPDATE users SET active=0 WHERE id=?', [req.params.id]);
+    await pool.query('UPDATE users SET active=false WHERE id=?', [req.params.id]);
     res.json({ message: 'Usuario desactivado' });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });

@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 
     if (student_id) { query += ` AND a.student_id=?`; params.push(student_id); }
     if (month && year) {
-      query += ` AND MONTH(a.date)=? AND YEAR(a.date)=?`;
+      query += ` AND EXTRACT(MONTH FROM a.date)=? AND EXTRACT(YEAR FROM a.date)=?`;
       params.push(month, year);
     }
 
@@ -43,7 +43,7 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
     const { student_id, date, status } = req.body;
     await pool.query(
       `INSERT INTO attendance (student_id, date, status)
-       VALUES (?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status)`,
+       VALUES (?,?,?) ON CONFLICT (student_id, date) DO UPDATE SET status=EXCLUDED.status`,
       [student_id, date, status]
     );
     res.status(201).json({ message: 'Asistencia registrada' });
@@ -58,11 +58,16 @@ router.post('/bulk', authorizeRoles('docente', 'admin'), async (req, res) => {
     const { records } = req.body; // [{student_id, date, status}]
     if (!records || !records.length) return res.status(400).json({ error: 'Sin registros' });
 
-    const values = records.map(r => [r.student_id, r.date, r.status]);
-    await pool.query(
+    const params = [];
+    const valueClauses = records.map((r, i) => {
+      const offset = i * 3;
+      params.push(r.student_id, r.date, r.status);
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
+    });
+    await pool._pool.query(
       `INSERT INTO attendance (student_id, date, status)
-       VALUES ? ON DUPLICATE KEY UPDATE status=VALUES(status)`,
-      [values]
+       VALUES ${valueClauses.join(', ')} ON CONFLICT (student_id, date) DO UPDATE SET status=EXCLUDED.status`,
+      params
     );
     res.status(201).json({ message: `${records.length} registros guardados` });
   } catch (err) {

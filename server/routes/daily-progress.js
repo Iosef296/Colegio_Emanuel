@@ -46,10 +46,10 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO daily_progress (teacher_course_id, date, content) VALUES (?,?,?)',
+      'INSERT INTO daily_progress (teacher_course_id, date, content) VALUES (?,?,?) RETURNING id',
       [teacher_course_id, date, content]
     );
-    res.status(201).json({ id: result.insertId });
+    res.status(201).json({ id: result[0].id });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });

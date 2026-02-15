@@ -51,7 +51,7 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
 
     await pool.query(
       `INSERT INTO grades (student_id, teacher_course_id, evaluation_name, score)
-       VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE score=VALUES(score)`,
+       VALUES (?,?,?,?) ON CONFLICT (student_id, teacher_course_id, evaluation_name) DO UPDATE SET score=EXCLUDED.score`,
       [student_id, teacher_course_id, evaluation_name, score]
     );
     res.status(201).json({ message: 'Nota guardada' });

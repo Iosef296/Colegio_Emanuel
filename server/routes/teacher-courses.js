@@ -51,12 +51,12 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
     const { teacher_id, course_id, grade_level_id, period_id } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO teacher_courses (teacher_id, course_id, grade_level_id, period_id) VALUES (?,?,?,?)',
+      'INSERT INTO teacher_courses (teacher_id, course_id, grade_level_id, period_id) VALUES (?,?,?,?) RETURNING id',
       [teacher_id, course_id, grade_level_id, period_id || 1]
     );
-    res.status(201).json({ id: result.insertId });
+    res.status(201).json({ id: result[0].id });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Asignación ya existe' });
+    if (err.code === '23505') return res.status(409).json({ error: 'Asignación ya existe' });
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

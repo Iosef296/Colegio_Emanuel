@@ -14,20 +14,20 @@ router.get('/', async (req, res) => {
         FROM students s
         JOIN grade_levels gl ON s.grade_level_id = gl.id
         JOIN parent_student ps ON ps.student_id = s.id
-        WHERE ps.parent_id = ? AND s.active = 1`;
+        WHERE ps.parent_id = ? AND s.active = true`;
       params = [req.user.id];
     } else if (req.user.role === 'docente') {
       query = `SELECT DISTINCT s.*, gl.name as grade_name, gl.section
         FROM students s
         JOIN grade_levels gl ON s.grade_level_id = gl.id
         JOIN teacher_courses tc ON tc.grade_level_id = s.grade_level_id
-        WHERE tc.teacher_id = ? AND s.active = 1`;
+        WHERE tc.teacher_id = ? AND s.active = true`;
       params = [req.user.id];
     } else {
       query = `SELECT s.*, gl.name as grade_name, gl.section
         FROM students s
         JOIN grade_levels gl ON s.grade_level_id = gl.id
-        WHERE s.active = 1 ORDER BY s.last_name, s.first_name`;
+        WHERE s.active = true ORDER BY s.last_name, s.first_name`;
       params = [];
     }
 
@@ -43,10 +43,10 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
     const { first_name, last_name, dni, birth_date, grade_level_id } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO students (first_name, last_name, dni, birth_date, grade_level_id) VALUES (?,?,?,?,?)',
+      'INSERT INTO students (first_name, last_name, dni, birth_date, grade_level_id) VALUES (?,?,?,?,?) RETURNING id',
       [first_name, last_name, dni, birth_date, grade_level_id]
     );
-    res.status(201).json({ id: result.insertId });
+    res.status(201).json({ id: result[0].id });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });
   }
@@ -77,7 +77,7 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 
 router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
-    await pool.query('UPDATE students SET active=0 WHERE id=?', [req.params.id]);
+    await pool.query('UPDATE students SET active=false WHERE id=?', [req.params.id]);
     res.json({ message: 'Alumno desactivado' });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });

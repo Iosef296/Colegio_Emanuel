@@ -1,5 +1,3 @@
-USE colegio_emanuel;
-
 -- Academic period
 INSERT INTO academic_periods (id, year, name, start_date, end_date)
 VALUES (1, 2026, 'Año Escolar 2026', '2026-03-01', '2026-12-15');
@@ -32,7 +30,7 @@ INSERT INTO courses (id, name, color, description) VALUES
 (5, 'Inglés', '#EC4899', 'Curso de inglés'),
 (6, 'Arte', '#14B8A6', 'Curso de arte');
 
--- Teacher-Course assignments (Prof. Garcia teaches Math, Ciencias, Historia; Prof. Lopez teaches Comunicacion, Ingles, Arte)
+-- Teacher-Course assignments
 INSERT INTO teacher_courses (id, teacher_id, course_id, grade_level_id, period_id) VALUES
 (1, 2, 1, 1, 1),  -- Garcia - Matematicas
 (2, 3, 2, 1, 1),  -- Lopez - Comunicacion
@@ -68,21 +66,29 @@ INSERT INTO attendance (student_id, date, status) VALUES
 
 -- Payments
 INSERT INTO payments (student_id, month, year, amount, paid, paid_date) VALUES
-(1, 'Marzo', 2026, 350.00, 1, '2026-03-05'),
-(1, 'Abril', 2026, 350.00, 1, '2026-04-03'),
-(1, 'Mayo', 2026, 350.00, 0, NULL),
-(1, 'Junio', 2026, 350.00, 0, NULL),
-(1, 'Julio', 2026, 350.00, 0, NULL),
-(1, 'Agosto', 2026, 350.00, 0, NULL);
+(1, 'Marzo', 2026, 350.00, TRUE, '2026-03-05'),
+(1, 'Abril', 2026, 350.00, TRUE, '2026-04-03'),
+(1, 'Mayo', 2026, 350.00, FALSE, NULL),
+(1, 'Junio', 2026, 350.00, FALSE, NULL),
+(1, 'Julio', 2026, 350.00, FALSE, NULL),
+(1, 'Agosto', 2026, 350.00, FALSE, NULL);
 
 -- Communications
 INSERT INTO communications (author_id, course_id, grade_level_id, title, body, type, created_at) VALUES
 (2, 1, 1, 'Examen parcial', 'Se comunica que el examen parcial de Matemáticas será el día viernes 20 de febrero. Los temas a evaluar son: fracciones, decimales y operaciones combinadas. Se recomienda repasar los ejercicios del cuaderno.', 'curso', '2026-02-12 10:00:00'),
 (1, NULL, NULL, 'Reunión de padres', 'Se convoca a reunión general de padres de familia para el día sábado 22 de febrero a las 9:00 AM en el auditorio del colegio. Tema: avance académico del primer bimestre.', 'general', '2026-02-10 10:00:00'),
-(3, 2, 1, 'Tarea de lectura', 'Los alumnos deberán leer el capítulo 5 del libro \'El principito\' y realizar un resumen de una página para el día lunes.', 'curso', '2026-02-08 10:00:00');
+(3, 2, 1, 'Tarea de lectura', 'Los alumnos deberán leer el capítulo 5 del libro ''El principito'' y realizar un resumen de una página para el día lunes.', 'curso', '2026-02-08 10:00:00');
 
 -- Daily progress
 INSERT INTO daily_progress (teacher_course_id, date, content) VALUES
 (1, '2026-02-12', 'Se trabajó fracciones equivalentes. Los alumnos realizaron ejercicios prácticos en grupo.'),
 (2, '2026-02-12', 'Análisis de texto narrativo. Se identificaron personajes principales y secundarios.'),
 (1, '2026-02-11', 'Introducción a decimales. Conversión de fracciones a decimales.');
+
+-- Reset sequences to max id
+SELECT setval('academic_periods_id_seq', (SELECT MAX(id) FROM academic_periods));
+SELECT setval('grade_levels_id_seq', (SELECT MAX(id) FROM grade_levels));
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+SELECT setval('students_id_seq', (SELECT MAX(id) FROM students));
+SELECT setval('courses_id_seq', (SELECT MAX(id) FROM courses));
+SELECT setval('teacher_courses_id_seq', (SELECT MAX(id) FROM teacher_courses));

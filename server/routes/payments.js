@@ -21,7 +21,12 @@ router.get('/', async (req, res) => {
 
     if (student_id) { query += ` AND p.student_id=?`; params.push(student_id); }
 
-    query += ' ORDER BY p.year, FIELD(p.month, "Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre")';
+    query += ` ORDER BY p.year, CASE p.month
+      WHEN 'Enero' THEN 1 WHEN 'Febrero' THEN 2 WHEN 'Marzo' THEN 3
+      WHEN 'Abril' THEN 4 WHEN 'Mayo' THEN 5 WHEN 'Junio' THEN 6
+      WHEN 'Julio' THEN 7 WHEN 'Agosto' THEN 8 WHEN 'Septiembre' THEN 9
+      WHEN 'Octubre' THEN 10 WHEN 'Noviembre' THEN 11 WHEN 'Diciembre' THEN 12
+      END`;
     const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
@@ -34,12 +39,12 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
     const { student_id, month, year, amount, paid, paid_date } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO payments (student_id, month, year, amount, paid, paid_date) VALUES (?,?,?,?,?,?)',
-      [student_id, month, year, amount, paid || 0, paid_date || null]
+      'INSERT INTO payments (student_id, month, year, amount, paid, paid_date) VALUES (?,?,?,?,?,?) RETURNING id',
+      [student_id, month, year, amount, paid || false, paid_date || null]
     );
-    res.status(201).json({ id: result.insertId });
+    res.status(201).json({ id: result[0].id });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Pago ya existe' });
+    if (err.code === '23505') return res.status(409).json({ error: 'Pago ya existe' });
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

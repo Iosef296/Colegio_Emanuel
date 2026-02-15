@@ -18,10 +18,10 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
     const { name, color, description } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO courses (name, color, description) VALUES (?,?,?)',
+      'INSERT INTO courses (name, color, description) VALUES (?,?,?) RETURNING id',
       [name, color || '#3B82F6', description]
     );
-    res.status(201).json({ id: result.insertId });
+    res.status(201).json({ id: result[0].id });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });
   }

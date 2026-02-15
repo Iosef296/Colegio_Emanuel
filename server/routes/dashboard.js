@@ -13,7 +13,7 @@ router.get('/padre', async (req, res) => {
        FROM students s
        JOIN parent_student ps ON ps.student_id = s.id
        JOIN grade_levels gl ON s.grade_level_id = gl.id
-       WHERE ps.parent_id = ? AND s.active = 1`,
+       WHERE ps.parent_id = ? AND s.active = true`,
       [req.user.id]
     );
 
@@ -86,7 +86,7 @@ router.get('/docente', async (req, res) => {
       `SELECT COUNT(DISTINCT s.id) as total
        FROM students s
        JOIN teacher_courses tc ON tc.grade_level_id = s.grade_level_id
-       WHERE tc.teacher_id = ? AND s.active = 1`,
+       WHERE tc.teacher_id = ? AND s.active = true`,
       [req.user.id]
     );
 
@@ -103,11 +103,11 @@ router.get('/docente', async (req, res) => {
 
 router.get('/admin', async (req, res) => {
   try {
-    const [users] = await pool.query('SELECT COUNT(*) as total FROM users WHERE active=1');
-    const [students] = await pool.query('SELECT COUNT(*) as total FROM students WHERE active=1');
+    const [users] = await pool.query('SELECT COUNT(*) as total FROM users WHERE active=true');
+    const [students] = await pool.query('SELECT COUNT(*) as total FROM students WHERE active=true');
     const [courses] = await pool.query('SELECT COUNT(*) as total FROM courses');
     const [pendingPayments] = await pool.query(
-      'SELECT COUNT(*) as count, SUM(amount) as total FROM payments WHERE paid=0'
+      'SELECT COUNT(*) as count, SUM(amount) as total FROM payments WHERE paid=false'
     );
 
     res.json({

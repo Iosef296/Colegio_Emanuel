@@ -39,10 +39,10 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
   try {
     const { course_id, grade_level_id, title, body, type } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO communications (author_id, course_id, grade_level_id, title, body, type) VALUES (?,?,?,?,?,?)',
+      'INSERT INTO communications (author_id, course_id, grade_level_id, title, body, type) VALUES (?,?,?,?,?,?) RETURNING id',
       [req.user.id, course_id || null, grade_level_id || null, title, body, type || 'general']
     );
-    res.status(201).json({ id: result.insertId });
+    res.status(201).json({ id: result[0].id });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });

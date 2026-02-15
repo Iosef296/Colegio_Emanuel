@@ -1,4 +1,8 @@
-const API_BASE = 'https://colegio-emanuel-api.onrender.com/api';
+const API_BASE =
+  import.meta.env.MODE === 'development'
+    ? '/api'
+    : 'https://colegio-emanuel.onrender.com/api';
+
 
 
 async function request(path, options = {}) {

@@ -1,4 +1,5 @@
-const API_BASE = 'https://colegio-emanuel-1.onrender.com/api';
+const API_BASE = 'https://colegio-emanuel-api.onrender.com/api';
+
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('token');

@@ -37,7 +37,7 @@ export default function DocenteAvances() {
               <span className="badge badge-primary">{a.course_name}</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(a.date)}</span>
             </div>
-            <p style={{ fontSize: 13, lineHeight: 1.5 }}>{a.content}</p>
+            <p style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>{a.content}</p>
           </div>
         ))}
       </div>

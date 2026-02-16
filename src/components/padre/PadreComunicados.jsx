@@ -18,7 +18,7 @@ export default function PadreComunicados() {
     return (
       <div>
         <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div onClick={() => setSelected(null)} style={{ cursor: 'pointer', opacity: 0.8 }}>← Volver</div>
             <h1>Comunicado</h1>
           </div>
@@ -29,7 +29,7 @@ export default function PadreComunicados() {
               <span className="badge badge-primary">{selected.course_name || 'General'}</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(selected.created_at)}</span>
             </div>
-            <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{selected.title}</h3>
+            <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, wordBreak: 'break-word' }}>{selected.title}</h3>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 14 }}>De: {selected.author_name}</p>
             <p style={{ fontSize: 13, lineHeight: 1.6, wordBreak: 'break-word' }}>{selected.body}</p>
           </div>
@@ -53,7 +53,7 @@ export default function PadreComunicados() {
               <span className="badge badge-primary">{c.course_name || 'General'}</span>
               <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatDate(c.created_at)}</span>
             </div>
-            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{c.title}</p>
+            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, wordBreak: 'break-word' }}>{c.title}</p>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>De: {c.author_name}</p>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word' }}>{c.body}</p>
           </div>

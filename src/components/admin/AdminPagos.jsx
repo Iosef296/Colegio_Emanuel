@@ -138,7 +138,7 @@ export default function AdminPagos() {
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: 15, fontWeight: 700, color: p.paid ? 'var(--success)' : 'var(--danger)' }}>S/ {Number(p.amount).toFixed(0)}</p>
               </div>

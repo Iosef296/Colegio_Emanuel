@@ -23,7 +23,7 @@ export default function PadreDashboard() {
     <div>
       {/* Header */}
       <div className="page-header" style={{ paddingBottom: 60, borderRadius: '0 0 30px 30px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
           <div>
             <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
             <h1>{user.full_name}</h1>
@@ -49,7 +49,7 @@ export default function PadreDashboard() {
           { label: 'Total\nNotas', value: stats.totalNotas || 0, color: 'var(--success)', bg: '#D1FAE5' },
           { label: 'Promedio\nActual', value: stats.promedio || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
         ].map((s, i) => (
-          <div key={i} className="stat-card" style={{ flex: 1 }}>
+          <div key={i} className="stat-card" style={{ flex: 1, minWidth: 90 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
               <span style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</span>
             </div>

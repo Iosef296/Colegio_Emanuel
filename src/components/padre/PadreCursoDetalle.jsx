@@ -35,7 +35,7 @@ export default function PadreCursoDetalle() {
   return (
     <div>
       <div className="page-header" style={{ background: course.color || 'var(--nav-bg)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div onClick={() => navigate('/padre/cursos')} style={{ cursor: 'pointer', width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="back" color="white" size={18} />
           </div>
@@ -52,12 +52,12 @@ export default function PadreCursoDetalle() {
           <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Notas</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {['N1', 'N2', 'N3'].map((n, i) => (
-              <div key={i} style={{ flex: 1, textAlign: 'center', padding: '8px 0', background: 'var(--bg)', borderRadius: 10 }}>
+              <div key={i} style={{ flex: 1, minWidth: 60, textAlign: 'center', padding: '8px 0', background: 'var(--bg)', borderRadius: 10 }}>
                 <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{n}</p>
                 <p style={{ fontSize: 18, fontWeight: 800 }}>{scores[i] ?? '-'}</p>
               </div>
             ))}
-            <div style={{ flex: 1, textAlign: 'center', padding: '8px 0', background: 'var(--primary-light)', borderRadius: 10 }}>
+            <div style={{ flex: 1, minWidth: 60, textAlign: 'center', padding: '8px 0', background: 'var(--primary-light)', borderRadius: 10 }}>
               <p style={{ fontSize: 10, color: 'var(--primary)', fontWeight: 600 }}>Prom</p>
               <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>{avg}</p>
             </div>
@@ -72,7 +72,7 @@ export default function PadreCursoDetalle() {
           ) : progress.map((a, i) => (
             <div key={i} style={{ padding: '10px 0', borderBottom: i < progress.length - 1 ? '1px solid var(--border)' : 'none' }}>
               <p style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600, marginBottom: 4 }}>{a.date}</p>
-              <p style={{ fontSize: 13, lineHeight: 1.4 }}>{a.content}</p>
+              <p style={{ fontSize: 13, lineHeight: 1.4, wordBreak: 'break-word' }}>{a.content}</p>
             </div>
           ))}
         </div>

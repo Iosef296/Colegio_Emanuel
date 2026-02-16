@@ -203,6 +203,8 @@ body {
   border: 1px solid var(--border);
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+  word-break: break-word;
 }
 
 /* Buttons */
@@ -301,6 +303,7 @@ body {
 .page-header h1 {
   font-size: 22px;
   font-weight: 700;
+  word-break: break-word;
 }
 
 .page-header p {
@@ -498,6 +501,16 @@ body {
 
   .stat-value {
     font-size: 20px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 11px;
   }
 }
 

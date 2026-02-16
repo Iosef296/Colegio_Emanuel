@@ -78,7 +78,7 @@ export default function PadreAsistencia() {
             { label: 'Tarde', count: tarde, color: 'var(--warning)', bg: '#FEF3C7' },
             { label: 'Falta', count: falta, color: 'var(--danger)', bg: '#FEE2E2' },
           ].map((s, i) => (
-            <div key={i} style={{ flex: 1, background: s.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+            <div key={i} style={{ flex: 1, minWidth: 80, background: s.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
               <p style={{ fontSize: 22, fontWeight: 800, color: s.color, marginBottom: 2 }}>{s.count}</p>
               <p style={{ fontSize: 10, color: s.color, fontWeight: 600 }}>{s.label}</p>
             </div>

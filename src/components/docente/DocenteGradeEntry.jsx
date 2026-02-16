@@ -63,7 +63,7 @@ export default function DocenteGradeEntry() {
   return (
     <div>
       <div className="page-header" style={{ background: course.color || 'var(--nav-bg)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div onClick={() => navigate('/docente/cursos')} style={{ cursor: 'pointer', width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="back" color="white" size={18} />
           </div>

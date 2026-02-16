@@ -494,8 +494,7 @@ body {
     padding: 18px;
   }
 
-  .table-header,
-  .table-row {
+  .table-scroll .table-container {
     min-width: 400px;
   }
 

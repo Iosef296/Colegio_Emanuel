@@ -162,6 +162,7 @@ body {
   flex: 1;
   margin-left: var(--sidebar-width);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Bottom nav (mobile) */
@@ -523,6 +524,7 @@ body {
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .stat-grid {

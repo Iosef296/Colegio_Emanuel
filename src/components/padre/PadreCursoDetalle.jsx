@@ -27,7 +27,7 @@ export default function PadreCursoDetalle() {
   if (!course) return <div className="empty-state"><p>Curso no encontrado</p></div>;
 
   const gradeMap = {};
-  grades.forEach(g => { gradeMap[g.evaluation_name] = g.score; });
+  grades.forEach(g => { gradeMap[g.evaluation_name] = Number(g.score); });
   const scores = ['N1', 'N2', 'N3'].map(n => gradeMap[n]);
   const validScores = scores.filter(s => s != null);
   const avg = validScores.length ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1) : '-';

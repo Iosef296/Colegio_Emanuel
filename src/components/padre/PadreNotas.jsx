@@ -15,7 +15,7 @@ export default function PadreNotas() {
   const byCourse = {};
   grades.forEach(g => {
     if (!byCourse[g.course_name]) byCourse[g.course_name] = { color: g.color, grades: {} };
-    byCourse[g.course_name].grades[g.evaluation_name] = g.score;
+    byCourse[g.course_name].grades[g.evaluation_name] = Number(g.score);
   });
 
   const rows = Object.entries(byCourse).map(([name, data]) => {

@@ -38,7 +38,7 @@ export default function DocenteComunicados() {
               <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatDate(c.created_at)}</span>
             </div>
             <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{c.title}</p>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.body}</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word' }}>{c.body}</p>
           </div>
         ))}
       </div>

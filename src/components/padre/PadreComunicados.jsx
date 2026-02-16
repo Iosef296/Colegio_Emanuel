@@ -31,7 +31,7 @@ export default function PadreComunicados() {
             </div>
             <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{selected.title}</h3>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 14 }}>De: {selected.author_name}</p>
-            <p style={{ fontSize: 13, lineHeight: 1.6 }}>{selected.body}</p>
+            <p style={{ fontSize: 13, lineHeight: 1.6, wordBreak: 'break-word' }}>{selected.body}</p>
           </div>
         </div>
       </div>
@@ -55,7 +55,7 @@ export default function PadreComunicados() {
             </div>
             <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{c.title}</p>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>De: {c.author_name}</p>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.body}</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word' }}>{c.body}</p>
           </div>
         ))}
       </div>

@@ -119,6 +119,10 @@ export default function Layout({ children }) {
             {item.label}
           </NavLink>
         ))}
+        <button onClick={handleLogout} className="bottom-nav-item" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
+          <Icon name="logout" color="var(--danger)" size={20} />
+          Salir
+        </button>
       </nav>
     </div>
   );

@@ -469,9 +469,54 @@ body {
 }
 
 @media (max-width: 480px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .page-header h1 {
+    font-size: 18px;
+  }
+
   .content-area {
     padding: 0 10px 10px;
   }
+
+  .modal-content {
+    width: 95vw;
+    max-height: 95vh;
+    padding: 18px;
+  }
+
+  .table-header,
+  .table-row {
+    min-width: 400px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+}
+
+/* Utility classes */
+.responsive-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
 /* Login page */

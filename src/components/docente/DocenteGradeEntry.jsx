@@ -81,6 +81,7 @@ export default function DocenteGradeEntry() {
           </div>
         )}
 
+        <div className="table-scroll">
         <div className="table-container">
           <div className="table-header" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
             <span>Alumno</span>
@@ -105,6 +106,7 @@ export default function DocenteGradeEntry() {
               ))}
             </div>
           ))}
+        </div>
         </div>
 
         <button

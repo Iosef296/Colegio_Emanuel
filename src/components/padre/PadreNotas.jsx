@@ -44,10 +44,11 @@ export default function PadreNotas() {
         {/* Promedio General */}
         <div style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', borderRadius: 18, padding: 20, marginBottom: 16, color: 'white', textAlign: 'center' }}>
           <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Promedio General</p>
-          <p style={{ fontSize: 40, fontWeight: 800 }}>{promedioGeneral}</p>
+          <p style={{ fontSize: 36, fontWeight: 800 }}>{promedioGeneral}</p>
         </div>
 
         {/* Table */}
+        <div className="table-scroll">
         <div className="table-container">
           <div className="table-header" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}>
             {['Curso', 'N1', 'N2', 'N3', 'Prom'].map(h => (
@@ -63,6 +64,7 @@ export default function PadreNotas() {
               <span style={{ textAlign: 'center', fontWeight: 800, color: 'var(--primary)' }}>{n.prom}</span>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

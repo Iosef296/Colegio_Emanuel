@@ -33,7 +33,7 @@ export default function DocenteComunicados() {
           <div className="empty-state"><p>No hay comunicados</p></div>
         ) : comms.map(c => (
           <div key={c.id} className="card" style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
               <span className="badge badge-primary">{c.course_name || 'General'}</span>
               <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatDate(c.created_at)}</span>
             </div>

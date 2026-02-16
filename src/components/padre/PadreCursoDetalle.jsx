@@ -50,7 +50,7 @@ export default function PadreCursoDetalle() {
         {/* Notas */}
         <div className="card" style={{ marginBottom: 14 }}>
           <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Notas</h4>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {['N1', 'N2', 'N3'].map((n, i) => (
               <div key={i} style={{ flex: 1, textAlign: 'center', padding: '8px 0', background: 'var(--bg)', borderRadius: 10 }}>
                 <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{n}</p>

@@ -79,7 +79,7 @@ export default function AdminPagos() {
         {/* Summary */}
         <div style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', borderRadius: 18, padding: 20, marginBottom: 16, color: 'white' }}>
           <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Total pendiente de cobro</p>
-          <p style={{ fontSize: 32, fontWeight: 800 }}>S/ {totalPending.toFixed(2)}</p>
+          <p style={{ fontSize: 28, fontWeight: 800 }}>S/ {totalPending.toFixed(2)}</p>
           <p style={{ fontSize: 11, opacity: 0.7 }}>{payments.filter(p => !p.paid).length} pagos pendientes</p>
         </div>
 
@@ -126,8 +126,8 @@ export default function AdminPagos() {
 
         {/* Payment list */}
         {payments.map(p => (
-          <div key={p.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div key={p.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: p.paid ? '#D1FAE5' : '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {p.paid ? <Icon name="check" color="var(--success)" size={20} /> : <Icon name="clock" color="var(--danger)" size={20} />}
               </div>

@@ -24,7 +24,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, padding: '0 16px', marginTop: -30, marginBottom: 20 }}>
+      <div className="stat-grid" style={{ padding: '0 16px', marginTop: -30, marginBottom: 20 }}>
         {[
           { label: 'Usuarios', value: data?.totalUsers || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
           { label: 'Alumnos', value: data?.totalStudents || 0, color: 'var(--success)', bg: '#D1FAE5' },

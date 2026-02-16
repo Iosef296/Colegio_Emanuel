@@ -132,8 +132,8 @@ export default function AdminUsuarios() {
 
         {/* User list */}
         {users.map(u => (
-          <div key={u.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div key={u.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name="user" color="var(--text-muted)" size={20} />
               </div>
@@ -142,7 +142,7 @@ export default function AdminUsuarios() {
                 <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>@{u.username}</p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span className={`badge ${roleBadge[u.role]}`}>{u.role}</span>
               <button onClick={() => handleEdit(u)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
                 <Icon name="edit" size={14} />

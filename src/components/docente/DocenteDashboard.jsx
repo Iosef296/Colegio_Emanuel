@@ -27,7 +27,7 @@ export default function DocenteDashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'flex', gap: 10, padding: '0 16px', marginTop: -30, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '0 16px', marginTop: -30, marginBottom: 20 }}>
         <div className="stat-card" style={{ flex: 1 }}>
           <div className="stat-value" style={{ color: 'var(--primary)' }}>{data?.totalCourses || 0}</div>
           <div className="stat-label">Cursos</div>

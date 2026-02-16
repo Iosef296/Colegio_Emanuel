@@ -37,7 +37,7 @@ export default function DocenteComunicadoForm() {
   return (
     <div>
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div onClick={() => navigate('/docente/comunicados')} style={{ cursor: 'pointer', opacity: 0.8 }}>← Volver</div>
           <h1>Nuevo Comunicado</h1>
         </div>

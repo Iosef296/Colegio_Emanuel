@@ -72,7 +72,7 @@ export default function PadreAsistencia() {
         </div>
 
         {/* Summary */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
           {[
             { label: 'Temprano', count: temprano, color: 'var(--success)', bg: '#D1FAE5' },
             { label: 'Tarde', count: tarde, color: 'var(--warning)', bg: '#FEF3C7' },

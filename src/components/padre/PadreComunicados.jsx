@@ -25,7 +25,7 @@ export default function PadreComunicados() {
         </div>
         <div className="content-area">
           <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 4 }}>
               <span className="badge badge-primary">{selected.course_name || 'General'}</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(selected.created_at)}</span>
             </div>
@@ -49,7 +49,7 @@ export default function PadreComunicados() {
           <div className="empty-state"><p>No hay comunicados</p></div>
         ) : comms.map(c => (
           <div key={c.id} className="card" style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => setSelected(c)}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
               <span className="badge badge-primary">{c.course_name || 'General'}</span>
               <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatDate(c.created_at)}</span>
             </div>

@@ -43,7 +43,7 @@ export default function PadreDashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'flex', gap: 10, padding: '0 16px', marginTop: -40, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '0 16px', marginTop: -40, marginBottom: 20 }}>
         {[
           { label: 'Pagos\nPendientes', value: stats.pagosPendientes || 0, color: 'var(--warning)', bg: '#FEF3C7' },
           { label: 'Total\nNotas', value: stats.totalNotas || 0, color: 'var(--success)', bg: '#D1FAE5' },

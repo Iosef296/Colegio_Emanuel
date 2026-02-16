@@ -33,7 +33,7 @@ export default function DocenteAvances() {
           <div className="empty-state"><p>No hay avances registrados</p></div>
         ) : progress.map((a, i) => (
           <div key={i} className="card" style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 4 }}>
               <span className="badge badge-primary">{a.course_name}</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(a.date)}</span>
             </div>

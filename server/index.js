@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 dotenv.config();
 
+import pool from './config/db.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import studentRoutes from './routes/students.js';
@@ -37,6 +38,10 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/grade-levels', gradeLevelRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+pool.query('ALTER TABLE students ADD COLUMN IF NOT EXISTS codigo VARCHAR(20) UNIQUE')
+  .then(() => console.log('DB: columna codigo OK'))
+  .catch(err => console.error('DB migration error:', err.message));
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);

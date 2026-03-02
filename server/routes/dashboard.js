@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import pool from '../config/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authenticateToken);
 
-router.get('/padre', async (req, res) => {
+router.get('/padre', authorizeRoles('padre'), async (req, res) => {
   try {
     // Get parent's students
     const [students] = await pool.query(
@@ -29,7 +29,7 @@ router.get('/padre', async (req, res) => {
 
     // Pending payments
     const [payments] = await pool.query(
-      'SELECT COUNT(*) as pending FROM payments WHERE student_id = ? AND paid = 0',
+      'SELECT COUNT(*) as pending FROM payments WHERE student_id = ? AND paid = false',
       [student.id]
     );
 
@@ -71,7 +71,7 @@ router.get('/padre', async (req, res) => {
   }
 });
 
-router.get('/docente', async (req, res) => {
+router.get('/docente', authorizeRoles('docente'), async (req, res) => {
   try {
     const [courses] = await pool.query(
       `SELECT tc.id, c.name, c.color, gl.name as grade_name, gl.section
@@ -101,7 +101,7 @@ router.get('/docente', async (req, res) => {
   }
 });
 
-router.get('/admin', async (req, res) => {
+router.get('/admin', authorizeRoles('admin'), async (req, res) => {
   try {
     const [users] = await pool.query('SELECT COUNT(*) as total FROM users WHERE active=true');
     const [students] = await pool.query('SELECT COUNT(*) as total FROM students WHERE active=true');

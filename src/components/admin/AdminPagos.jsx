@@ -7,8 +7,9 @@ export default function AdminPagos() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ student_id: '', month: '', year: '2026', amount: '350' });
+  const [form, setForm] = useState({ student_id: '', month: '', year: String(new Date().getFullYear()), amount: '350' });
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
   const [message, setMessage] = useState('');
 
   const load = () => {
@@ -24,14 +25,17 @@ export default function AdminPagos() {
   useEffect(load, []);
 
   const handleTogglePaid = async (p) => {
+    setTogglingId(p.id);
     try {
       await api.put(`/payments/${p.id}`, {
-        paid: p.paid ? 0 : 1,
+        paid: !p.paid,
         paid_date: p.paid ? null : new Date().toISOString().split('T')[0],
       });
       load();
     } catch (err) {
       console.error(err);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -140,14 +144,15 @@ export default function AdminPagos() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: 15, fontWeight: 700, color: p.paid ? 'var(--success)' : 'var(--danger)' }}>S/ {Number(p.amount).toFixed(0)}</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: p.paid ? 'var(--success)' : 'var(--danger)' }}>S/ {Number(p.amount).toFixed(2)}</p>
               </div>
               <button
                 onClick={() => handleTogglePaid(p)}
+                disabled={togglingId === p.id}
                 className={`btn btn-sm ${p.paid ? 'btn-secondary' : 'btn-success'}`}
                 style={{ fontSize: 10, padding: '4px 10px' }}
               >
-                {p.paid ? 'Anular' : 'Pagar'}
+                {togglingId === p.id ? '...' : p.paid ? 'Anular' : 'Pagar'}
               </button>
             </div>
           </div>

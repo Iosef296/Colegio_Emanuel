@@ -46,7 +46,22 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
       'INSERT INTO students (first_name, last_name, dni, birth_date, grade_level_id) VALUES (?,?,?,?,?) RETURNING id',
       [first_name, last_name, dni, birth_date, grade_level_id]
     );
-    res.status(201).json({ id: result[0].id });
+    const id = result[0].id;
+    const year = new Date().getFullYear();
+    const codigo = `EMN-${year}-${String(id).padStart(4, '0')}`;
+    await pool.query('UPDATE students SET codigo=? WHERE id=?', [codigo, id]);
+    res.status(201).json({ id, codigo });
+  } catch (err) {
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+router.post('/:id/codigo', authorizeRoles('admin'), async (req, res) => {
+  try {
+    const year = new Date().getFullYear();
+    const codigo = `EMN-${year}-${String(req.params.id).padStart(4, '0')}`;
+    await pool.query('UPDATE students SET codigo=? WHERE id=?', [codigo, req.params.id]);
+    res.json({ codigo });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
 
@@ -11,6 +12,8 @@ export default function AdminAlumnos() {
   const [form, setForm] = useState({ first_name: '', last_name: '', dni: '', birth_date: '', grade_level_id: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [qrStudent, setQrStudent] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   const load = () => {
     Promise.all([
@@ -23,6 +26,16 @@ export default function AdminAlumnos() {
   };
 
   useEffect(load, []);
+
+  useEffect(() => {
+    if (qrStudent?.codigo) {
+      QRCode.toDataURL(qrStudent.codigo, { width: 200, margin: 2 })
+        .then(url => setQrDataUrl(url))
+        .catch(console.error);
+    } else {
+      setQrDataUrl('');
+    }
+  }, [qrStudent]);
 
   const resetForm = () => {
     setForm({ first_name: '', last_name: '', dni: '', birth_date: '', grade_level_id: '' });
@@ -45,24 +58,70 @@ export default function AdminAlumnos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setMessage('');
+
+    const trimmedFirst = form.first_name.trim();
+    const trimmedLast = form.last_name.trim();
+    if (!trimmedFirst || !trimmedLast) {
+      return setMessage('Error: Nombres y apellidos son obligatorios');
+    }
+    if (form.dni && !/^\d{8}$/.test(form.dni)) {
+      return setMessage('Error: El DNI debe tener exactamente 8 dígitos');
+    }
+    if (form.birth_date && new Date(form.birth_date) > new Date()) {
+      return setMessage('Error: La fecha de nacimiento no puede ser futura');
+    }
+
+    setSaving(true);
     try {
-      const data = { ...form, grade_level_id: Number(form.grade_level_id) };
+      const data = { ...form, first_name: trimmedFirst, last_name: trimmedLast, grade_level_id: Number(form.grade_level_id) };
       if (editing) {
         await api.put(`/students/${editing}`, data);
         setMessage('Alumno actualizado');
+        load();
+        setTimeout(resetForm, 1000);
       } else {
-        await api.post('/students', data);
-        setMessage('Alumno creado');
+        const created = await api.post('/students', data);
+        const gl = gradeLevels.find(g => g.id === Number(form.grade_level_id));
+        const newStudent = {
+          id: created.id,
+          first_name: trimmedFirst,
+          last_name: trimmedLast,
+          codigo: created.codigo,
+          grade_name: gl?.name || '',
+          section: gl?.section || '',
+        };
+        load();
+        resetForm();
+        setQrStudent(newStudent);
       }
-      load();
-      setTimeout(resetForm, 1000);
     } catch (err) {
       setMessage('Error: ' + err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl || !qrStudent) return;
+    const a = document.createElement('a');
+    a.href = qrDataUrl;
+    a.download = `QR-${qrStudent.first_name}-${qrStudent.last_name}.png`;
+    a.click();
+  };
+
+  const handleGenerateCodigo = async () => {
+    try {
+      const { codigo } = await api.post(`/students/${qrStudent.id}/codigo`, {});
+      setQrStudent({ ...qrStudent, codigo });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const closeQr = () => {
+    setQrStudent(null);
+    setQrDataUrl('');
   };
 
   if (loading) return <div className="loading">Cargando...</div>;
@@ -123,6 +182,48 @@ export default function AdminAlumnos() {
           </div>
         )}
 
+        {qrStudent && (
+          <div className="modal-overlay" onClick={closeQr}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <h3>QR - {qrStudent.first_name} {qrStudent.last_name}</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>
+                {qrStudent.grade_name} "{qrStudent.section}"
+              </p>
+              {qrStudent.codigo ? (
+                <>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+                    Código: {qrStudent.codigo}
+                  </p>
+                  <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                    {qrDataUrl
+                      ? <img src={qrDataUrl} alt="QR Code" style={{ width: 200, height: 200 }} />
+                      : <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Generando QR...</div>
+                    }
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleDownloadQr} disabled={!qrDataUrl}>
+                      Descargar PNG
+                    </button>
+                    <button className="btn btn-secondary" onClick={closeQr}>Cerrar</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                    Este alumno no tiene código QR asignado.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleGenerateCodigo}>
+                      Generar código
+                    </button>
+                    <button className="btn btn-secondary" onClick={closeQr}>Cerrar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {students.map(s => (
           <div key={s.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
@@ -134,9 +235,14 @@ export default function AdminAlumnos() {
                 <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.grade_name} "{s.section}" {s.dni ? `· DNI: ${s.dni}` : ''}</p>
               </div>
             </div>
-            <button onClick={() => handleEdit(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
-              <Icon name="edit" size={14} />
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setQrStudent(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }} title="Ver QR">
+                <Icon name="qr" size={14} />
+              </button>
+              <button onClick={() => handleEdit(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
+                <Icon name="edit" size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>

@@ -6,6 +6,12 @@ const MONTHS = [
   { label: 'Abril', num: 4 },
   { label: 'Mayo', num: 5 },
   { label: 'Junio', num: 6 },
+  { label: 'Julio', num: 7 },
+  { label: 'Agosto', num: 8 },
+  { label: 'Septiembre', num: 9 },
+  { label: 'Octubre', num: 10 },
+  { label: 'Noviembre', num: 11 },
+  { label: 'Diciembre', num: 12 },
 ];
 
 export default function PadreAsistencia() {
@@ -14,7 +20,7 @@ export default function PadreAsistencia() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get(`/attendance?month=${selectedMonth}&year=2026`)
+    api.get(`/attendance?month=${selectedMonth}&year=${new Date().getFullYear()}`)
       .then(setAttendance)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -35,7 +41,7 @@ export default function PadreAsistencia() {
   const falta = attendance.filter(a => a.status === 'falta').length;
 
   // Generate weeks for the month
-  const year = 2026;
+  const year = new Date().getFullYear();
   const daysInMonth = new Date(year, selectedMonth, 0).getDate();
   const weeks = [];
   let week = [];

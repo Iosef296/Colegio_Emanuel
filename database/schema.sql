@@ -45,10 +45,12 @@ CREATE TABLE students (
   dni VARCHAR(15),
   birth_date DATE,
   grade_level_id INT NOT NULL,
+  codigo VARCHAR(20) UNIQUE,
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (grade_level_id) REFERENCES grade_levels(id)
 );
+-- For existing databases: ALTER TABLE students ADD COLUMN IF NOT EXISTS codigo VARCHAR(20) UNIQUE;
 
 -- Parent-Student relationship
 CREATE TABLE parent_student (

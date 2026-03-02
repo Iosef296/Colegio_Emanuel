@@ -68,12 +68,14 @@ export default function Login() {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
 
-          <div style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '0 8px' }}>
-            <p><strong>Cuentas de prueba:</strong></p>
-            <p>admin / admin123</p>
-            <p>garcia.maria / admin123</p>
-            <p>quispe.pedro / admin123</p>
-          </div>
+          {import.meta.env.DEV && (
+            <div style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '0 8px' }}>
+              <p><strong>Cuentas de prueba:</strong></p>
+              <p>admin / admin123</p>
+              <p>garcia.maria / admin123</p>
+              <p>quispe.pedro / admin123</p>
+            </div>
+          )}
         </form>
       </div>
     </div>

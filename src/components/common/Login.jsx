@@ -27,9 +27,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">🏫</div>
-        <h1 className="login-title">Colegio Emanuel</h1>
-        <p className="login-subtitle">Sistema de Control Escolar</p>
+        <img src="/logo.png" alt="Colegio Emanuel" style={{ width: 160, marginBottom: 8 }} />
 
         <form className="login-form" onSubmit={handleSubmit}>
           <h3>Iniciar Sesión</h3>

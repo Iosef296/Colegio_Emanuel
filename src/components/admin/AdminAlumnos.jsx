@@ -114,6 +114,7 @@ export default function AdminAlumnos() {
     try {
       const { codigo } = await api.post(`/students/${qrStudent.id}/codigo`, {});
       setQrStudent({ ...qrStudent, codigo });
+      load();
     } catch (err) {
       console.error(err);
     }

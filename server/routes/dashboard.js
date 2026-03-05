@@ -9,7 +9,7 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
   try {
     // Get parent's students
     const [students] = await pool.query(
-      `SELECT s.id, s.first_name, s.last_name, gl.name as grade_name, gl.section
+      `SELECT s.id, s.first_name, s.last_name, s.codigo, gl.name as grade_name, gl.section
        FROM students s
        JOIN parent_student ps ON ps.student_id = s.id
        JOIN grade_levels gl ON s.grade_level_id = gl.id
@@ -55,7 +55,8 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
       student: {
         name: `${student.first_name} ${student.last_name}`,
         grade: student.grade_name,
-        section: student.section
+        section: student.section,
+        codigo: student.codigo || null
       },
       stats: {
         promedio: grades[0].avg_score ? Number(grades[0].avg_score).toFixed(1) : 0,

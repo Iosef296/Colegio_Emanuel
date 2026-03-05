@@ -61,7 +61,7 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  const roleLabel = { padre: 'Padre de familia', docente: 'Docente', admin: 'Administrador' };
+  const roleLabel = { padre: 'Alumno', docente: 'Docente', admin: 'Administrador' };
 
   return (
     <div className="app-layout">

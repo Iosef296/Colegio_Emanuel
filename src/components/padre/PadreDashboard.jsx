@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../common/Icon';
@@ -9,10 +10,21 @@ export default function PadreDashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [showQr, setShowQr] = useState(false);
 
   useEffect(() => {
     api.get('/dashboard/padre').then(setData).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const codigo = data?.student?.codigo;
+    if (codigo) {
+      QRCode.toDataURL(codigo, { width: 220, margin: 2 })
+        .then(url => setQrDataUrl(url))
+        .catch(console.error);
+    }
+  }, [data]);
 
   if (loading) return <div className="loading">Cargando...</div>;
 
@@ -36,9 +48,20 @@ export default function PadreDashboard() {
           </div>
         </div>
         {student && (
-          <p style={{ opacity: 0.8, fontSize: 13 }}>
-            Alumno: {student.name} — {student.grade} "{student.section}"
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <p style={{ opacity: 0.8, fontSize: 13 }}>
+              Alumno: {student.name} — {student.grade} "{student.section}"
+            </p>
+            {qrDataUrl && (
+              <button
+                onClick={() => setShowQr(true)}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 12 }}
+              >
+                <Icon name="qr" color="white" size={16} />
+                <span>QR</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -80,6 +103,19 @@ export default function PadreDashboard() {
           ))}
         </div>
       </div>
+
+      {/* QR Modal */}
+      {showQr && student && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setShowQr(false)}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 24, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{student.name}</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{student.grade} "{student.section}"</p>
+            <img src={qrDataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 12px' }} />
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: 'monospace' }}>{student.codigo}</p>
+            <button onClick={() => setShowQr(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

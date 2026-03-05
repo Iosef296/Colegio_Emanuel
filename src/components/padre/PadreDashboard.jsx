@@ -38,7 +38,7 @@ export default function PadreDashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
           <div>
             <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
-            <h1>{user.full_name}</h1>
+            <h1>{student?.name || user.full_name}</h1>
           </div>
           <div style={{ position: 'relative' }}>
             <Icon name="bell" color="white" size={22} />
@@ -50,7 +50,7 @@ export default function PadreDashboard() {
         {student && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <p style={{ opacity: 0.8, fontSize: 13 }}>
-              Alumno: {student.name} — {student.grade} "{student.section}"
+              {student.grade} "{student.section}"
             </p>
             {qrDataUrl && (
               <button

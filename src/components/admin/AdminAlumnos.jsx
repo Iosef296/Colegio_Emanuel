@@ -90,6 +90,8 @@ export default function AdminAlumnos() {
           codigo: created.codigo,
           grade_name: gl?.name || '',
           section: gl?.section || '',
+          username: created.username,
+          password: created.password,
         };
         load();
         resetForm();
@@ -201,6 +203,13 @@ export default function AdminAlumnos() {
                       : <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Generando QR...</div>
                     }
                   </div>
+                  {qrStudent.username && (
+                    <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: 12, marginBottom: 16, textAlign: 'left' }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', marginBottom: 6 }}>Credenciales de acceso</p>
+                      <p style={{ fontSize: 13, marginBottom: 4 }}>Usuario: <strong style={{ fontFamily: 'monospace' }}>{qrStudent.username}</strong></p>
+                      <p style={{ fontSize: 13 }}>Contraseña: <strong style={{ fontFamily: 'monospace' }}>{qrStudent.password}</strong></p>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleDownloadQr} disabled={!qrDataUrl}>
                       Descargar PNG

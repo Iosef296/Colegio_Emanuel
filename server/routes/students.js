@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import pool from '../config/db.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
@@ -50,8 +51,27 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     const year = new Date().getFullYear();
     const codigo = `EMN-${year}-${String(id).padStart(4, '0')}`;
     await pool.query('UPDATE students SET codigo=? WHERE id=?', [codigo, id]);
-    res.status(201).json({ id, codigo });
+
+    // Auto-create user account
+    const firstLastName = last_name.trim().split(/\s+/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const firstFirstName = first_name.trim().split(/\s+/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    let username = `${firstLastName}.${firstFirstName}`;
+
+    // Handle duplicate usernames
+    const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing.length > 0) username = `${username}${id}`;
+
+    const password = dni || `alumno${id}`;
+    const hash = await bcrypt.hash(password, 10);
+    const [userResult] = await pool.query(
+      'INSERT INTO users (username, password_hash, role, full_name, dni) VALUES (?,?,?,?,?) RETURNING id',
+      [username, hash, 'padre', `${first_name} ${last_name}`, dni || null]
+    );
+    await pool.query('INSERT INTO parent_student (parent_id, student_id) VALUES (?,?)', [userResult[0].id, id]);
+
+    res.status(201).json({ id, codigo, username, password });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

@@ -19,13 +19,24 @@ router.get('/', authorizeRoles('admin'), async (req, res) => {
 
 router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
-    const { username, password, role, full_name, dni, email, phone } = req.body;
+    let { username, password, role, full_name, first_name, last_name, dni, email, phone } = req.body;
+
+    // Auto-generate credentials when first_name and last_name are provided
+    if (first_name && last_name) {
+      full_name = `${first_name.trim()} ${last_name.trim()}`;
+      const normalize = s => s.trim().split(/\s+/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      username = `${normalize(last_name)}.${normalize(first_name)}`;
+      password = dni || `docente${Date.now()}`;
+      const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ?', [`${username}%`]);
+      if (existing[0].c > 0) username = `${username}${existing[0].c + 1}`;
+    }
+
     const hash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
       'INSERT INTO users (username, password_hash, role, full_name, dni, email, phone) VALUES (?,?,?,?,?,?,?) RETURNING id',
-      [username, hash, role, full_name, dni, email, phone]
+      [username, hash, role, full_name, dni || null, email || null, phone || null]
     );
-    res.status(201).json({ id: result[0].id, username, role, full_name });
+    res.status(201).json({ id: result[0].id, username, password, role, full_name });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'El usuario ya existe' });
     res.status(500).json({ error: 'Error del servidor' });

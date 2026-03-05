@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
 
@@ -7,9 +8,12 @@ export default function AdminUsuarios() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ username: '', password: '', role: 'docente', full_name: '', dni: '', email: '', phone: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', dni: '', email: '', phone: '' });
+  const [editForm, setEditForm] = useState({ full_name: '', password: '', dni: '', email: '', phone: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [credentials, setCredentials] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   const load = () => {
     api.get('/users').then(data => setUsers(data.filter(u => u.role === 'docente'))).catch(console.error).finally(() => setLoading(false));
@@ -17,16 +21,24 @@ export default function AdminUsuarios() {
 
   useEffect(load, []);
 
+  useEffect(() => {
+    if (credentials?.username) {
+      QRCode.toDataURL(credentials.username, { width: 200, margin: 2 })
+        .then(url => setQrDataUrl(url))
+        .catch(console.error);
+    }
+  }, [credentials]);
+
   const resetForm = () => {
-    setForm({ username: '', password: '', role: 'padre', full_name: '', dni: '', email: '', phone: '' });
+    setForm({ first_name: '', last_name: '', dni: '', email: '', phone: '' });
     setEditing(null);
     setShowForm(false);
     setMessage('');
   };
 
   const handleEdit = (u) => {
-    setForm({ username: u.username, password: '', role: u.role, full_name: u.full_name, dni: u.dni || '', email: u.email || '', phone: u.phone || '' });
-    setEditing(u.id);
+    setEditForm({ full_name: u.full_name, password: '', dni: u.dni || '', email: u.email || '', phone: u.phone || '' });
+    setEditing(u);
     setShowForm(true);
   };
 
@@ -36,16 +48,18 @@ export default function AdminUsuarios() {
     setMessage('');
     try {
       if (editing) {
-        const data = { ...form };
+        const data = { ...editForm };
         if (!data.password) delete data.password;
-        await api.put(`/users/${editing}`, data);
-        setMessage('Usuario actualizado');
+        await api.put(`/users/${editing.id}`, data);
+        setMessage('Profesor actualizado');
+        load();
+        setTimeout(resetForm, 1000);
       } else {
-        await api.post('/users', form);
-        setMessage('Usuario creado');
+        const created = await api.post('/users', { ...form, role: 'docente' });
+        load();
+        resetForm();
+        setCredentials({ username: created.username, password: created.password, full_name: created.full_name });
       }
-      load();
-      setTimeout(resetForm, 1000);
     } catch (err) {
       setMessage('Error: ' + err.message);
     } finally {
@@ -62,7 +76,13 @@ export default function AdminUsuarios() {
     }
   };
 
-  const roleBadge = { padre: 'badge-primary', docente: 'badge-success', admin: 'badge-warning' };
+  const handleDownloadQr = () => {
+    if (!qrDataUrl || !credentials) return;
+    const a = document.createElement('a');
+    a.href = qrDataUrl;
+    a.download = `QR-${credentials.full_name}.png`;
+    a.click();
+  };
 
   if (loading) return <div className="loading">Cargando...</div>;
 
@@ -79,38 +99,66 @@ export default function AdminUsuarios() {
           </button>
         </div>
       </div>
+
       <div className="content-area">
-        {/* Form modal */}
+        {/* Create / Edit modal */}
         {showForm && (
           <div className="modal-overlay" onClick={() => resetForm()}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <h3>{editing ? 'Editar Profesor' : 'Nuevo Profesor'}</h3>
               {message && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: message.includes('Error') ? '#FEE2E2' : '#D1FAE5', color: message.includes('Error') ? 'var(--danger)' : 'var(--success)', fontSize: 13 }}>{message}</div>}
               <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label className="form-label">Nombre completo</label>
-                  <input className="form-input" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Usuario</label>
-                  <input className="form-input" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Contraseña {editing && '(dejar vacío para no cambiar)'}</label>
-                  <input className="form-input" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} {...(!editing && { required: true })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">DNI</label>
-                  <input className="form-input" value={form.dni} onChange={e => setForm({ ...form, dni: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input className="form-input" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Teléfono</label>
-                  <input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-                </div>
+                {editing ? (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Nombre completo</label>
+                      <input className="form-input" value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Usuario</label>
+                      <input className="form-input" value={editing.username} disabled style={{ opacity: 0.6 }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Nueva contraseña (dejar vacío para no cambiar)</label>
+                      <input className="form-input" type="password" value={editForm.password} onChange={e => setEditForm({ ...editForm, password: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">DNI</label>
+                      <input className="form-input" value={editForm.dni} onChange={e => setEditForm({ ...editForm, dni: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
+                      <input className="form-input" type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Teléfono</label>
+                      <input className="form-input" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Nombres</label>
+                      <input className="form-input" value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Apellidos</label>
+                      <input className="form-input" value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">DNI <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(se usará como contraseña)</span></label>
+                      <input className="form-input" value={form.dni} onChange={e => setForm({ ...form, dni: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
+                      <input className="form-input" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Teléfono</label>
+                      <input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                    </div>
+                  </>
+                )}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 1, justifyContent: 'center' }}>
                     {saving ? 'Guardando...' : 'Guardar'}
@@ -122,7 +170,33 @@ export default function AdminUsuarios() {
           </div>
         )}
 
-        {/* User list */}
+        {/* Credentials + QR modal */}
+        {credentials && (
+          <div className="modal-overlay" onClick={() => setCredentials(null)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <h3>Profesor creado</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{credentials.full_name}</p>
+              {qrDataUrl && (
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <img src={qrDataUrl} alt="QR Code" style={{ width: 200, height: 200 }} />
+                </div>
+              )}
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', marginBottom: 6 }}>Credenciales de acceso</p>
+                <p style={{ fontSize: 13, marginBottom: 4 }}>Usuario: <strong style={{ fontFamily: 'monospace' }}>{credentials.username}</strong></p>
+                <p style={{ fontSize: 13 }}>Contraseña: <strong style={{ fontFamily: 'monospace' }}>{credentials.password}</strong></p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleDownloadQr} disabled={!qrDataUrl}>
+                  Descargar QR
+                </button>
+                <button className="btn btn-secondary" onClick={() => setCredentials(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Teacher list */}
         {users.map(u => (
           <div key={u.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
@@ -134,8 +208,7 @@ export default function AdminUsuarios() {
                 <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>@{u.username}</p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span className={`badge ${roleBadge[u.role]}`}>{u.role}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={() => handleEdit(u)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
                 <Icon name="edit" size={14} />
               </button>

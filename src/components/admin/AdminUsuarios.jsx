@@ -7,12 +7,12 @@ export default function AdminUsuarios() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ username: '', password: '', role: 'padre', full_name: '', dni: '', email: '', phone: '' });
+  const [form, setForm] = useState({ username: '', password: '', role: 'docente', full_name: '', dni: '', email: '', phone: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   const load = () => {
-    api.get('/users').then(setUsers).catch(console.error).finally(() => setLoading(false));
+    api.get('/users').then(data => setUsers(data.filter(u => u.role === 'docente'))).catch(console.error).finally(() => setLoading(false));
   };
 
   useEffect(load, []);
@@ -71,8 +71,8 @@ export default function AdminUsuarios() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1>Usuarios</h1>
-            <p>{users.length} usuarios registrados</p>
+            <h1>Profesores</h1>
+            <p>{users.length} profesores registrados</p>
           </div>
           <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }} onClick={() => { resetForm(); setShowForm(true); }}>
             + Nuevo
@@ -84,7 +84,7 @@ export default function AdminUsuarios() {
         {showForm && (
           <div className="modal-overlay" onClick={() => resetForm()}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <h3>{editing ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+              <h3>{editing ? 'Editar Profesor' : 'Nuevo Profesor'}</h3>
               {message && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: message.includes('Error') ? '#FEE2E2' : '#D1FAE5', color: message.includes('Error') ? 'var(--danger)' : 'var(--success)', fontSize: 13 }}>{message}</div>}
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
@@ -98,14 +98,6 @@ export default function AdminUsuarios() {
                 <div className="form-group">
                   <label className="form-label">Contraseña {editing && '(dejar vacío para no cambiar)'}</label>
                   <input className="form-input" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} {...(!editing && { required: true })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Rol</label>
-                  <select className="form-select" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                    <option value="padre">Padre</option>
-                    <option value="docente">Docente</option>
-                    <option value="admin">Admin</option>
-                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">DNI</label>

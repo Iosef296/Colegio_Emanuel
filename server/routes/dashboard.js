@@ -104,7 +104,7 @@ router.get('/docente', authorizeRoles('docente'), async (req, res) => {
 
 router.get('/admin', authorizeRoles('admin'), async (req, res) => {
   try {
-    const [users] = await pool.query('SELECT COUNT(*) as total FROM users WHERE active=true');
+    const [users] = await pool.query("SELECT COUNT(*) as total FROM users WHERE active=true AND role='docente'");
     const [students] = await pool.query('SELECT COUNT(*) as total FROM students WHERE active=true');
     const [courses] = await pool.query('SELECT COUNT(*) as total FROM courses');
     const [pendingPayments] = await pool.query(
@@ -112,7 +112,7 @@ router.get('/admin', authorizeRoles('admin'), async (req, res) => {
     );
 
     res.json({
-      totalUsers: users[0].total,
+      totalTeachers: users[0].total,
       totalStudents: students[0].total,
       totalCourses: courses[0].total,
       pendingPayments: pendingPayments[0].count,

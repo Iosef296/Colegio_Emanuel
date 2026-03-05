@@ -26,7 +26,7 @@ export default function AdminDashboard() {
       {/* Stats */}
       <div className="stat-grid" style={{ padding: '0 16px', marginTop: -30, marginBottom: 20 }}>
         {[
-          { label: 'Usuarios', value: data?.totalUsers || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
+          { label: 'Profesores', value: data?.totalTeachers || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
           { label: 'Alumnos', value: data?.totalStudents || 0, color: 'var(--success)', bg: '#D1FAE5' },
           { label: 'Cursos', value: data?.totalCourses || 0, color: 'var(--warning)', bg: '#FEF3C7' },
           { label: 'Pagos Pend.', value: data?.pendingPayments || 0, color: 'var(--danger)', bg: '#FEE2E2' },
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
         <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Gestión</h3>
         <div className="grid-2">
           {[
-            { icon: 'users', label: 'Usuarios', desc: 'Gestionar cuentas', to: '/admin/usuarios', color: '#3B82F6', bg: '#EFF6FF' },
+            { icon: 'users', label: 'Profesores', desc: 'Gestionar profesores', to: '/admin/usuarios', color: '#3B82F6', bg: '#EFF6FF' },
             { icon: 'user', label: 'Alumnos', desc: 'Gestionar alumnos', to: '/admin/alumnos', color: '#10B981', bg: '#D1FAE5' },
             { icon: 'book', label: 'Cursos', desc: 'Gestionar cursos', to: '/admin/cursos', color: '#F59E0B', bg: '#FEF3C7' },
             { icon: 'clipboard', label: 'Asignaciones', desc: 'Docente-Curso', to: '/admin/asignaciones', color: '#8B5CF6', bg: '#EDE9FE' },

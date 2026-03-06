@@ -68,7 +68,9 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
       'SELECT paid FROM payments WHERE student_id=? AND month=? AND year=?',
       [student.id, currentMonthName, today.getFullYear()]
     );
-    const mesActualPagado = currentPayment.length > 0 && Boolean(currentPayment[0].paid);
+    const paidVal = currentPayment[0]?.paid;
+    console.log('[dashboard/padre] payment check:', { student_id: student.id, month: currentMonthName, year: today.getFullYear(), paidVal, type: typeof paidVal, rows: currentPayment.length });
+    const mesActualPagado = paidVal === true || Number(paidVal) === 1;
 
     // Unread communications count
     const [comms] = await pool.query(

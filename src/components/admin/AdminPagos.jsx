@@ -223,10 +223,22 @@ export default function AdminPagos() {
         <p>Gestión de mensualidades</p>
       </div>
       <div className="content-area">
+        {/* Summary per student */}
         <div style={{ background: 'linear-gradient(135deg,#7C3AED,#6D28D9)', borderRadius: 18, padding: 20, marginBottom: 16, color: 'white' }}>
-          <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Total pendiente de cobro</p>
-          <p style={{ fontSize: 28, fontWeight: 800 }}>S/ {totalPending.toFixed(2)}</p>
-          <p style={{ fontSize: 11, opacity: 0.7 }}>{payments.filter(p => !p.paid).length} pagos pendientes</p>
+          <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Total pendiente de cobro</p>
+          <p style={{ fontSize: 26, fontWeight: 800, marginBottom: 12 }}>S/ {totalPending.toFixed(2)}</p>
+          {students
+            .map(s => ({ ...s, pending: pendingByStudent(s.id) }))
+            .filter(s => s.pending > 0)
+            .sort((a, b) => b.pending - a.pending)
+            .map(s => (
+              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+                <span style={{ fontSize: 12, opacity: 0.95 }}>{s.first_name} {s.last_name}</span>
+                <span style={{ fontSize: 12, fontWeight: 800 }}>S/ {s.pending.toFixed(0)}</span>
+              </div>
+            ))
+          }
+          {totalPending === 0 && <p style={{ fontSize: 12, opacity: 0.7 }}>Todos los alumnos al día</p>}
         </div>
 
         {grades.map(g => {

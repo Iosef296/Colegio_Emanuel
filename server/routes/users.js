@@ -70,7 +70,7 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 
 router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
-    await pool.query('UPDATE users SET active=false WHERE id=?', [req.params.id]);
+    await pool.query("UPDATE users SET active=false, username=CONCAT('_del', id, '_', username) WHERE id=?", [req.params.id]);
     res.json({ message: 'Usuario desactivado' });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });

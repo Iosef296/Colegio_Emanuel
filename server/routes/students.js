@@ -145,8 +145,14 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
     await pool.query('UPDATE students SET active=false WHERE id=?', [req.params.id]);
-    res.json({ message: 'Alumno desactivado' });
+    // Free the username of the linked user account
+    await pool.query(
+      "UPDATE users SET active=false, username=CONCAT('_del', id, '_', username) WHERE id IN (SELECT parent_id FROM parent_student WHERE student_id=?)",
+      [req.params.id]
+    );
+    res.json({ message: 'Alumno eliminado' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

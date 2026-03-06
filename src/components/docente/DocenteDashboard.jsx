@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../common/Icon';
@@ -9,21 +10,44 @@ export default function DocenteDashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [showQr, setShowQr] = useState(false);
 
   useEffect(() => {
     api.get('/dashboard/docente').then(setData).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (user?.username) {
+      QRCode.toDataURL(user.username, { width: 220, margin: 2 })
+        .then(url => setQrDataUrl(url))
+        .catch(console.error);
+    }
+  }, [user]);
 
   if (loading) return <div className="loading">Cargando...</div>;
 
   return (
     <div>
       <div className="page-header" style={{ paddingBottom: 50, borderRadius: '0 0 30px 30px' }}>
-        <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
-        <h1>{user.full_name}</h1>
-        <p style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-          {data?.totalCourses || 0} cursos · {data?.totalStudents || 0} alumnos
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
+            <h1>{user.full_name}</h1>
+            <p style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+              {data?.totalCourses || 0} cursos · {data?.totalStudents || 0} alumnos
+            </p>
+          </div>
+          {qrDataUrl && (
+            <button
+              onClick={() => setShowQr(true)}
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 12 }}
+            >
+              <Icon name="qr" color="white" size={16} />
+              <span>QR</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -68,6 +92,19 @@ export default function DocenteDashboard() {
           ))}
         </div>
       </div>
+
+      {/* QR Modal */}
+      {showQr && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setShowQr(false)}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 24, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{user.full_name}</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Docente</p>
+            <img src={qrDataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 12px' }} />
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: 'monospace' }}>{user.username}</p>
+            <button onClick={() => setShowQr(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

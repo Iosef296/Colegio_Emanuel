@@ -6,7 +6,7 @@ import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 const router = Router();
 router.use(authenticateToken);
 
-const SCHOOL_MONTHS = ['Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const SCHOOL_MONTHS = ['Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 async function generatePayments(studentId, year) {
   for (const month of SCHOOL_MONTHS) {

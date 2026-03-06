@@ -46,22 +46,29 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
           echo "Keystore size: $(wc -c < android/app/release.keystore) bytes"
 
-      - name: Build release APK
+      - name: Build release AAB (Play Store) + APK
         env:
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
-          ./gradlew assembleRelease \
+          ./gradlew bundleRelease assembleRelease \
             -Pandroid.injected.signing.store.file=$(pwd)/app/release.keystore \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-      - name: Upload APK
+      - name: Upload AAB (Play Store)
         uses: actions/upload-artifact@v4
         with:
-          name: colegio-emanuel-release
+          name: colegio-emanuel-playstore
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload APK (instalacion directa)
+        uses: actions/upload-artifact@v4
+        with:
+          name: colegio-emanuel-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30

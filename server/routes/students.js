@@ -40,9 +40,11 @@ router.get('/', async (req, res) => {
         WHERE tc.teacher_id = ? AND s.active = true`;
       params = [req.user.id];
     } else {
-      query = `SELECT s.*, gl.name as grade_name, gl.section
+      query = `SELECT s.*, gl.name as grade_name, gl.section, u.username
         FROM students s
         JOIN grade_levels gl ON s.grade_level_id = gl.id
+        LEFT JOIN parent_student ps ON ps.student_id = s.id
+        LEFT JOIN users u ON u.id = ps.parent_id AND u.active = true
         WHERE s.active = true ORDER BY s.last_name, s.first_name`;
       params = [];
     }

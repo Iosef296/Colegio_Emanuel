@@ -233,7 +233,7 @@ export default function AdminAlumnos() {
                     <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: 12, marginBottom: 16, textAlign: 'left' }}>
                       <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', marginBottom: 6 }}>Credenciales de acceso</p>
                       <p style={{ fontSize: 13, marginBottom: 4 }}>Usuario: <strong style={{ fontFamily: 'monospace' }}>{qrStudent.username}</strong></p>
-                      <p style={{ fontSize: 13 }}>Contraseña: <strong style={{ fontFamily: 'monospace' }}>{qrStudent.password}</strong></p>
+                      <p style={{ fontSize: 13 }}>Contraseña: <strong style={{ fontFamily: 'monospace' }}>{qrStudent.password || qrStudent.dni || 'su DNI'}</strong></p>
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>

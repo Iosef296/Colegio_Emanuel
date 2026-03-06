@@ -29,7 +29,6 @@ export default function AdminDashboard() {
           { label: 'Profesores', value: data?.totalTeachers || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
           { label: 'Alumnos', value: data?.totalStudents || 0, color: 'var(--success)', bg: '#D1FAE5' },
           { label: 'Cursos', value: data?.totalCourses || 0, color: 'var(--warning)', bg: '#FEF3C7' },
-          { label: 'Pagos Pend.', value: data?.pendingPayments || 0, color: 'var(--danger)', bg: '#FEE2E2' },
         ].map((s, i) => (
           <div key={i} className="stat-card">
             <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
@@ -38,16 +37,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {data?.pendingAmount > 0 && (
-        <div className="content-area" style={{ paddingBottom: 0 }}>
-          <div style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)', borderRadius: 16, padding: 16, color: 'white', marginBottom: 16 }}>
-            <p style={{ fontSize: 12, opacity: 0.8 }}>Total pendiente de cobro</p>
-            <p style={{ fontSize: 28, fontWeight: 800 }}>S/ {Number(data.pendingAmount).toFixed(2)}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="content-area">
+<div className="content-area">
         <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Gestión</h3>
         <div className="grid-2">
           {[

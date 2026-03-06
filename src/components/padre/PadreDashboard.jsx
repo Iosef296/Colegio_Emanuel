@@ -65,10 +65,20 @@ export default function PadreDashboard() {
         )}
       </div>
 
+      {/* Debt alert */}
+      {stats.deudaTotal > 0 && (
+        <div style={{ margin: '-30px 16px 0', marginBottom: 12 }}>
+          <div style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)', borderRadius: 16, padding: '12px 16px', color: 'white' }}>
+            <p style={{ fontSize: 12, opacity: 0.85 }}>⚠ Deuda vencida ({stats.deudaVencida} {stats.deudaVencida === 1 ? 'mes' : 'meses'})</p>
+            <p style={{ fontSize: 26, fontWeight: 800 }}>S/ {Number(stats.deudaTotal).toFixed(2)}</p>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '0 16px', marginTop: -40, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '0 16px', marginTop: stats.deudaTotal > 0 ? 12 : -40, marginBottom: 20 }}>
         {[
-          { label: 'Pagos\nPendientes', value: stats.pagosPendientes || 0, color: 'var(--warning)', bg: '#FEF3C7' },
+          { label: 'Pagos\nPendientes', value: stats.pagosPendientes || 0, color: stats.deudaVencida > 0 ? 'var(--danger)' : 'var(--warning)', bg: stats.deudaVencida > 0 ? '#FEE2E2' : '#FEF3C7' },
           { label: 'Total\nNotas', value: stats.totalNotas || 0, color: 'var(--success)', bg: '#D1FAE5' },
           { label: 'Promedio\nActual', value: stats.promedio || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
         ].map((s, i) => (

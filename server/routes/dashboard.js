@@ -27,11 +27,22 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
       [student.id]
     );
 
-    // Pending payments
-    const [payments] = await pool.query(
-      'SELECT COUNT(*) as pending FROM payments WHERE student_id = ? AND paid = false',
+    // Overdue payments: due on 15th of following month
+    const [unpaidPayments] = await pool.query(
+      'SELECT month, year, amount FROM payments WHERE student_id = ? AND paid = false',
       [student.id]
     );
+    const MONTH_NUM = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12 };
+    const today = new Date();
+    let deudaTotal = 0, deudaVencida = 0;
+    for (const p of unpaidPayments) {
+      let dueMonth = MONTH_NUM[p.month] + 1, dueYear = Number(p.year);
+      if (dueMonth > 12) { dueMonth = 1; dueYear++; }
+      if (today > new Date(dueYear, dueMonth - 1, 15)) {
+        deudaTotal += Number(p.amount);
+        deudaVencida++;
+      }
+    }
 
     // Recent attendance
     const [attendance] = await pool.query(
@@ -61,7 +72,9 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
       stats: {
         promedio: grades[0].avg_score ? Number(grades[0].avg_score).toFixed(1) : 0,
         totalNotas: grades[0].total,
-        pagosPendientes: payments[0].pending,
+        pagosPendientes: unpaidPayments.length,
+        deudaTotal: deudaTotal,
+        deudaVencida: deudaVencida,
         asistencia: attendanceMap,
         comunicados: comms[0].total
       }

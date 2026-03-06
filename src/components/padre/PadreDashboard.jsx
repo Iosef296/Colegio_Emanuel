@@ -40,7 +40,7 @@ export default function PadreDashboard() {
             <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
             <h1>{student?.name || user.full_name}</h1>
           </div>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/padre/comunicados')}>
             <Icon name="bell" color="white" size={22} />
             {stats.comunicados > 0 && (
               <div style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, background: 'var(--danger)', borderRadius: '50%', border: '2px solid var(--nav-bg)' }} />

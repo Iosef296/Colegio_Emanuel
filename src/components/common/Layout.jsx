@@ -68,8 +68,8 @@ export default function Layout({ children }) {
       {/* Sidebar (desktop) */}
       <aside className="sidebar">
         <div className="sidebar-header">
+          <img src="/logo.png" alt="Colegio Emanuel" style={{ width: 48, height: 48, objectFit: 'contain', marginBottom: 6 }} />
           <h2>Colegio Emanuel</h2>
-          <p>Sistema Escolar</p>
         </div>
         <nav className="sidebar-nav">
           {items.map(item => (

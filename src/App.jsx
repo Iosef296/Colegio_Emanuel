@@ -31,6 +31,7 @@ import AdminAlumnos from './components/admin/AdminAlumnos';
 import AdminCursos from './components/admin/AdminCursos';
 import AdminAsignaciones from './components/admin/AdminAsignaciones';
 import AdminPagos from './components/admin/AdminPagos';
+import AdminComunicados from './components/admin/AdminComunicados';
 
 function RoleRedirect() {
   const { user } = useAuth();
@@ -71,6 +72,7 @@ export default function App() {
       <Route path="/admin/cursos" element={<ProtectedRoute roles={['admin']}><Layout><AdminCursos /></Layout></ProtectedRoute>} />
       <Route path="/admin/asignaciones" element={<ProtectedRoute roles={['admin']}><Layout><AdminAsignaciones /></Layout></ProtectedRoute>} />
       <Route path="/admin/pagos" element={<ProtectedRoute roles={['admin']}><Layout><AdminPagos /></Layout></ProtectedRoute>} />
+      <Route path="/admin/comunicados" element={<ProtectedRoute roles={['admin']}><Layout><AdminComunicados /></Layout></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<RoleRedirect />} />

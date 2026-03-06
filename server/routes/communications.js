@@ -49,6 +49,20 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
   }
 });
 
+router.put('/:id', authorizeRoles('docente', 'admin'), async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (req.user.role === 'docente') {
+      await pool.query('UPDATE communications SET title=?, body=? WHERE id=? AND author_id=?', [title, body, req.params.id, req.user.id]);
+    } else {
+      await pool.query('UPDATE communications SET title=?, body=? WHERE id=?', [title, body, req.params.id]);
+    }
+    res.json({ message: 'Comunicado actualizado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
 router.delete('/:id', authorizeRoles('docente', 'admin'), async (req, res) => {
   try {
     if (req.user.role === 'docente') {

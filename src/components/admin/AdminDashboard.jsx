@@ -46,6 +46,7 @@ export default function AdminDashboard() {
             { icon: 'book', label: 'Cursos', desc: 'Gestionar cursos', to: '/admin/cursos', color: '#F59E0B', bg: '#FEF3C7' },
             { icon: 'clipboard', label: 'Asignaciones', desc: 'Docente-Curso', to: '/admin/asignaciones', color: '#8B5CF6', bg: '#EDE9FE' },
             { icon: 'dollar', label: 'Pagos', desc: 'Gestionar pagos', to: '/admin/pagos', color: '#EC4899', bg: '#FCE7F3' },
+            { icon: 'bell', label: 'Comunicados', desc: 'Editar y eliminar', to: '/admin/comunicados', color: '#F59E0B', bg: '#FEF3C7' },
           ].map((item, i) => (
             <div key={i} onClick={() => navigate(item.to)} className="card" style={{ cursor: 'pointer' }}>
               <div style={{ width: 42, height: 42, borderRadius: 12, background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>

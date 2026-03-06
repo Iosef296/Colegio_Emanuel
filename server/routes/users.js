@@ -27,8 +27,8 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
       const normalize = s => s.trim().split(/\s+/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       username = `${normalize(last_name)}.${normalize(first_name)}`;
       password = dni || `docente${Date.now()}`;
-      const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ?', [`${username}%`]);
-      if (existing[0].c > 0) username = `${username}${existing[0].c + 1}`;
+      const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ? AND active = true', [`${username}%`]);
+      if (existing[0].c > 0) username = `${username}${Number(existing[0].c) + 1}`;
     }
 
     const hash = await bcrypt.hash(password, 10);

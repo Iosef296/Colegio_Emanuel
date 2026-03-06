@@ -73,7 +73,7 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     let username = `${firstLastName}.${firstFirstName}`;
 
     // Handle duplicate usernames with sequential counter
-    const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ?', [`${username}%`]);
+    const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ? AND active = true', [`${username}%`]);
     if (existing[0].c > 0) username = `${username}${Number(existing[0].c) + 1}`;
 
     const password = dni || `alumno${id}`;

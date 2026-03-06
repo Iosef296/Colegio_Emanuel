@@ -68,7 +68,7 @@ export default function DocenteAttendance() {
   const scanFrame = useCallback((timestamp = 0) => {
     animRef.current = requestAnimationFrame(scanFrame);
 
-    if (timestamp - lastScanRef.current < 150) return;
+    if (timestamp - lastScanRef.current < 100) return;
     lastScanRef.current = timestamp;
 
     const video = videoRef.current;
@@ -96,12 +96,29 @@ export default function DocenteAttendance() {
 
   const startScanner = async () => {
     scannedRef.current.clear();
+    lastScanRef.current = 0;
     setScanMsg('');
     setShowScanner(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
+      // Enumerate cameras and pick main back camera (avoid ultra-wide)
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(d => d.kind === 'videoinput');
+      const backCameras = cameras.filter(c =>
+        !c.label.toLowerCase().includes('front') &&
+        !c.label.toLowerCase().includes('frontal')
+      );
+      // Prefer camera labeled as "0" or avoid "ultra"/"wide"/"gran"
+      const mainCam = backCameras.find(c =>
+        !c.label.toLowerCase().includes('ultra') &&
+        !c.label.toLowerCase().includes('wide') &&
+        !c.label.toLowerCase().includes('gran')
+      ) || backCameras[0];
+
+      const constraints = mainCam?.deviceId
+        ? { video: { deviceId: { exact: mainCam.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
+        : { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       setTimeout(() => {
         if (videoRef.current) {

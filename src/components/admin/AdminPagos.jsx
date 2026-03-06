@@ -104,7 +104,7 @@ export default function AdminPagos() {
                   <label className="form-label">Mes</label>
                   <select className="form-select" value={form.month} onChange={e => setForm({ ...form, month: e.target.value })} required>
                     <option value="">Seleccionar...</option>
-                    {['Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(m => (
+                    {['Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>

@@ -1,7 +1,7 @@
 const API_BASE =
   import.meta.env.MODE === 'development'
     ? '/api'
-    : 'https://colegio-emanuel.onrender.com/api';
+    : 'https://colegio-emanuel-api.fly.dev/api';
 
 
 

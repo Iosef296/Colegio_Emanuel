@@ -9,7 +9,7 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
   try {
     // Get parent's students
     const [students] = await pool.query(
-      `SELECT s.id, s.first_name, s.last_name, s.codigo, gl.name as grade_name, gl.section
+      `SELECT s.id, s.first_name, s.last_name, s.codigo, s.grade_level_id, gl.name as grade_name, gl.section
        FROM students s
        JOIN parent_student ps ON ps.student_id = s.id
        JOIN grade_levels gl ON s.grade_level_id = gl.id
@@ -54,6 +54,22 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
     const attendanceMap = {};
     attendance.forEach(a => { attendanceMap[a.status] = a.count; });
 
+    // Pending tasks (tareas) this month
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const [tareas] = await pool.query(
+      `SELECT COUNT(*) as total FROM communications WHERE type='tarea' AND grade_level_id=? AND created_at >= ?`,
+      [student.grade_level_id, startOfMonth]
+    );
+
+    // Current month payment status
+    const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const currentMonthName = MONTHS_ES[today.getMonth()];
+    const [currentPayment] = await pool.query(
+      'SELECT paid FROM payments WHERE student_id=? AND month=? AND year=?',
+      [student.id, currentMonthName, today.getFullYear()]
+    );
+    const mesActualPagado = currentPayment.length > 0 && Boolean(currentPayment[0].paid);
+
     // Unread communications count
     const [comms] = await pool.query(
       `SELECT COUNT(*) as total FROM communications
@@ -75,6 +91,8 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
         pagosPendientes: unpaidPayments.length,
         deudaTotal: deudaTotal,
         deudaVencida: deudaVencida,
+        tareasPendientes: Number(tareas[0].total),
+        mesActualPagado: mesActualPagado,
         asistencia: attendanceMap,
         comunicados: comms[0].total
       }

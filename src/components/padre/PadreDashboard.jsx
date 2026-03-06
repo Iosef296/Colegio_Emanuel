@@ -77,18 +77,33 @@ export default function PadreDashboard() {
 
       {/* Stats */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '0 16px', marginTop: stats.deudaTotal > 0 ? 12 : -40, marginBottom: 20 }}>
-        {[
-          { label: 'Pagos\nPendientes', value: stats.pagosPendientes || 0, color: stats.deudaVencida > 0 ? 'var(--danger)' : 'var(--warning)', bg: stats.deudaVencida > 0 ? '#FEE2E2' : '#FEF3C7' },
-          { label: 'Total\nNotas', value: stats.totalNotas || 0, color: 'var(--success)', bg: '#D1FAE5' },
-          { label: 'Promedio\nActual', value: stats.promedio || 0, color: 'var(--primary)', bg: 'var(--primary-light)' },
-        ].map((s, i) => (
-          <div key={i} className="stat-card" style={{ flex: 1, minWidth: 90 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</span>
-            </div>
-            <p className="stat-label">{s.label.split('\n').map((l, j) => <span key={j}>{l}<br /></span>)}</p>
+        {/* Pagos vencidos (regla del 15) */}
+        <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: stats.deudaVencida > 0 ? '#FEE2E2' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: stats.deudaVencida > 0 ? 'var(--danger)' : 'var(--warning)' }}>{stats.deudaVencida || 0}</span>
           </div>
-        ))}
+          <p className="stat-label">Pagos<br />Vencidos</p>
+        </div>
+        {/* Tareas pendientes */}
+        <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: '#8B5CF6' }}>{stats.tareasPendientes || 0}</span>
+          </div>
+          <p className="stat-label">Tareas<br />Pendientes</p>
+        </div>
+        {/* Promedio — visible solo si mes actual pagado */}
+        <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', position: 'relative' }}>
+            {stats.mesActualPagado
+              ? <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>{stats.promedio || 0}</span>
+              : <Icon name="lock" color="var(--primary)" size={18} />
+            }
+          </div>
+          <p className="stat-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+            <Icon name="eye" color="var(--text-muted)" size={11} />
+            Promedio<br />Actual
+          </p>
+        </div>
       </div>
 
       {/* Menu Grid */}

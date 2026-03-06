@@ -8,13 +8,16 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
   try {
     const { student_id, teacher_course_id } = req.query;
+    const { course_id } = req.query;
     let query = `SELECT g.id, g.student_id, g.teacher_course_id, g.evaluation_name, g.score,
-      s.first_name, s.last_name, c.name as course_name, c.color,
+      s.first_name, s.last_name, c.name as course_name, c.color, tc.course_id,
+      gl.name as grade_name, gl.section,
       u.full_name as teacher_name
       FROM grades g
       JOIN students s ON g.student_id = s.id
       JOIN teacher_courses tc ON g.teacher_course_id = tc.id
       JOIN courses c ON tc.course_id = c.id
+      JOIN grade_levels gl ON tc.grade_level_id = gl.id
       JOIN users u ON tc.teacher_id = u.id
       WHERE 1=1`;
     const params = [];
@@ -29,6 +32,8 @@ router.get('/', async (req, res) => {
 
     if (student_id) { query += ` AND g.student_id=?`; params.push(student_id); }
     if (teacher_course_id) { query += ` AND g.teacher_course_id=?`; params.push(teacher_course_id); }
+    if (course_id) { query += ` AND tc.course_id=?`; params.push(course_id); }
+    if (req.query.grade_level_id) { query += ` AND tc.grade_level_id=?`; params.push(req.query.grade_level_id); }
 
     query += ' ORDER BY c.name, g.evaluation_name';
     const [rows] = await pool.query(query, params);

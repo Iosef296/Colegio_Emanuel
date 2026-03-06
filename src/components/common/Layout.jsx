@@ -15,16 +15,20 @@ const NAV_ITEMS = {
   docente: [
     { to: '/docente', icon: 'home', label: 'Inicio', end: true },
     { to: '/docente/cursos', icon: 'book', label: 'Mis Cursos' },
-    { to: '/docente/asistencia', icon: 'calendar', label: 'Asistencia' },
     { to: '/docente/comunicados', icon: 'bell', label: 'Comunicados' },
     { to: '/docente/avances', icon: 'chart', label: 'Avances' },
+  ],
+  auxiliar: [
+    { to: '/auxiliar', icon: 'home', label: 'Inicio', end: true },
+    { to: '/auxiliar/asistencia', icon: 'calendar', label: 'Asistencia' },
+    { to: '/auxiliar/comunicados', icon: 'bell', label: 'Comunicados' },
   ],
   admin: [
     { to: '/admin', icon: 'home', label: 'Inicio', end: true },
     { to: '/admin/usuarios', icon: 'users', label: 'Profesores' },
+    { to: '/admin/grados', icon: 'clipboard', label: 'Grados' },
     { to: '/admin/alumnos', icon: 'user', label: 'Alumnos' },
     { to: '/admin/cursos', icon: 'book', label: 'Cursos' },
-    { to: '/admin/asignaciones', icon: 'clipboard', label: 'Asignaciones' },
     { to: '/admin/pagos', icon: 'dollar', label: 'Pagos' },
     { to: '/admin/comunicados', icon: 'bell', label: 'Comunicados' },
   ],
@@ -40,8 +44,12 @@ const MOBILE_NAV = {
   docente: [
     { to: '/docente', icon: 'home', label: 'Inicio', end: true },
     { to: '/docente/cursos', icon: 'book', label: 'Cursos' },
-    { to: '/docente/asistencia', icon: 'calendar', label: 'Asistencia' },
     { to: '/docente/comunicados', icon: 'bell', label: 'Avisos' },
+  ],
+  auxiliar: [
+    { to: '/auxiliar', icon: 'home', label: 'Inicio', end: true },
+    { to: '/auxiliar/asistencia', icon: 'calendar', label: 'Asistencia' },
+    { to: '/auxiliar/comunicados', icon: 'bell', label: 'Avisos' },
   ],
   admin: [
     { to: '/admin', icon: 'home', label: 'Inicio', end: true },
@@ -63,7 +71,7 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  const roleLabel = { padre: 'Alumno', docente: 'Docente', admin: 'Administrador' };
+  const roleLabel = { padre: 'Alumno', docente: 'Docente', admin: 'Administrador', auxiliar: 'Auxiliar' };
 
   return (
     <div className="app-layout">

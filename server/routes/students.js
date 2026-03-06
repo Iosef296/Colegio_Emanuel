@@ -8,12 +8,12 @@ router.use(authenticateToken);
 
 const SCHOOL_MONTHS = ['Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-async function generatePayments(studentId, year) {
+async function generatePayments(studentId, year, amount = 350) {
   for (const month of SCHOOL_MONTHS) {
     try {
       await pool.query(
         'INSERT INTO payments (student_id, month, year, amount, paid) VALUES (?,?,?,?,?)',
-        [studentId, month, year, 350, false]
+        [studentId, month, year, amount, false]
       );
     } catch (err) {
       if (err.code !== '23505') throw err; // ignore duplicates
@@ -59,7 +59,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
-    const { first_name, last_name, dni, birth_date, grade_level_id } = req.body;
+    const { first_name, last_name, dni, birth_date, grade_level_id, monthly_fee } = req.body;
     const [result] = await pool.query(
       'INSERT INTO students (first_name, last_name, dni, birth_date, grade_level_id) VALUES (?,?,?,?,?) RETURNING id',
       [first_name, last_name, dni, birth_date, grade_level_id]
@@ -87,7 +87,7 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     await pool.query('INSERT INTO parent_student (parent_id, student_id) VALUES (?,?)', [userResult[0].id, id]);
 
     // Auto-generate school year payments
-    await generatePayments(id, year);
+    await generatePayments(id, year, monthly_fee ? Number(monthly_fee) : 350);
 
     res.status(201).json({ id, codigo, username, password });
   } catch (err) {
@@ -123,7 +123,7 @@ router.post('/:id/codigo', authorizeRoles('admin'), async (req, res) => {
 
 router.put('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
-    const { first_name, last_name, dni, birth_date, grade_level_id, active } = req.body;
+    const { first_name, last_name, dni, birth_date, grade_level_id, active, monthly_fee } = req.body;
     const fields = [];
     const values = [];
 
@@ -134,10 +134,17 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
     if (grade_level_id !== undefined) { fields.push('grade_level_id=?'); values.push(grade_level_id); }
     if (active !== undefined) { fields.push('active=?'); values.push(active); }
 
-    if (fields.length === 0) return res.status(400).json({ error: 'Sin campos' });
+    if (fields.length === 0 && monthly_fee === undefined) return res.status(400).json({ error: 'Sin campos' });
 
-    values.push(req.params.id);
-    await pool.query(`UPDATE students SET ${fields.join(',')} WHERE id=?`, values);
+    if (fields.length > 0) {
+      values.push(req.params.id);
+      await pool.query(`UPDATE students SET ${fields.join(',')} WHERE id=?`, values);
+    }
+
+    if (monthly_fee !== undefined) {
+      await pool.query('UPDATE payments SET amount=? WHERE student_id=? AND paid=false', [Number(monthly_fee), req.params.id]);
+    }
+
     res.json({ message: 'Alumno actualizado' });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });

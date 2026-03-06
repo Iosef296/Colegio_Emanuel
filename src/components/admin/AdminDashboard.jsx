@@ -42,9 +42,9 @@ export default function AdminDashboard() {
         <div className="grid-2">
           {[
             { icon: 'users', label: 'Profesores', desc: 'Gestionar profesores', to: '/admin/usuarios', color: '#3B82F6', bg: '#EFF6FF' },
+            { icon: 'clipboard', label: 'Grados', desc: 'Gestionar grados', to: '/admin/grados', color: '#7C3AED', bg: '#EDE9FE' },
             { icon: 'user', label: 'Alumnos', desc: 'Gestionar alumnos', to: '/admin/alumnos', color: '#10B981', bg: '#D1FAE5' },
             { icon: 'book', label: 'Cursos', desc: 'Gestionar cursos', to: '/admin/cursos', color: '#F59E0B', bg: '#FEF3C7' },
-            { icon: 'clipboard', label: 'Asignaciones', desc: 'Docente-Curso', to: '/admin/asignaciones', color: '#8B5CF6', bg: '#EDE9FE' },
             { icon: 'dollar', label: 'Pagos', desc: 'Gestionar pagos', to: '/admin/pagos', color: '#EC4899', bg: '#FCE7F3' },
             { icon: 'bell', label: 'Comunicados', desc: 'Editar y eliminar', to: '/admin/comunicados', color: '#F59E0B', bg: '#FEF3C7' },
           ].map((item, i) => (

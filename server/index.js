@@ -51,6 +51,10 @@ pool.query('ALTER TABLE daily_progress ADD COLUMN IF NOT EXISTS photo_url TEXT')
   .then(() => console.log('DB: columna photo_url OK'))
   .catch(err => console.error('DB migration error:', err.message));
 
+pool.query(`ALTER TABLE teacher_courses ADD COLUMN IF NOT EXISTS eval_names TEXT DEFAULT '["N1","N2","N3"]'`)
+  .then(() => console.log('DB: columna eval_names OK'))
+  .catch(err => console.error('DB migration error:', err.message));
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

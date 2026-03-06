@@ -24,12 +24,16 @@ import DocenteComunicadoForm from './components/docente/DocenteComunicadoForm';
 import DocenteAvances from './components/docente/DocenteAvances';
 import DocenteAvanceForm from './components/docente/DocenteAvanceForm';
 
+// Auxiliar
+import AuxiliarDashboard from './components/auxiliar/AuxiliarDashboard';
+
 // Admin
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminUsuarios from './components/admin/AdminUsuarios';
 import AdminAlumnos from './components/admin/AdminAlumnos';
 import AdminCursos from './components/admin/AdminCursos';
 import AdminAsignaciones from './components/admin/AdminAsignaciones';
+import AdminGrados from './components/admin/AdminGrados';
 import AdminPagos from './components/admin/AdminPagos';
 import AdminComunicados from './components/admin/AdminComunicados';
 
@@ -65,9 +69,16 @@ export default function App() {
       <Route path="/docente/avances" element={<ProtectedRoute roles={['docente']}><Layout><DocenteAvances /></Layout></ProtectedRoute>} />
       <Route path="/docente/avances/nuevo" element={<ProtectedRoute roles={['docente']}><Layout><DocenteAvanceForm /></Layout></ProtectedRoute>} />
 
+      {/* Auxiliar routes */}
+      <Route path="/auxiliar" element={<ProtectedRoute roles={['auxiliar']}><Layout><AuxiliarDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/auxiliar/asistencia" element={<ProtectedRoute roles={['auxiliar']}><Layout><DocenteAttendance /></Layout></ProtectedRoute>} />
+      <Route path="/auxiliar/comunicados" element={<ProtectedRoute roles={['auxiliar']}><Layout><DocenteComunicados /></Layout></ProtectedRoute>} />
+      <Route path="/auxiliar/comunicados/nuevo" element={<ProtectedRoute roles={['auxiliar']}><Layout><DocenteComunicadoForm /></Layout></ProtectedRoute>} />
+
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
       <Route path="/admin/usuarios" element={<ProtectedRoute roles={['admin']}><Layout><AdminUsuarios /></Layout></ProtectedRoute>} />
+      <Route path="/admin/grados" element={<ProtectedRoute roles={['admin']}><Layout><AdminGrados /></Layout></ProtectedRoute>} />
       <Route path="/admin/alumnos" element={<ProtectedRoute roles={['admin']}><Layout><AdminAlumnos /></Layout></ProtectedRoute>} />
       <Route path="/admin/cursos" element={<ProtectedRoute roles={['admin']}><Layout><AdminCursos /></Layout></ProtectedRoute>} />
       <Route path="/admin/asignaciones" element={<ProtectedRoute roles={['admin']}><Layout><AdminAsignaciones /></Layout></ProtectedRoute>} />

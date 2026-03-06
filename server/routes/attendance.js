@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
+router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res) => {
   try {
     const { student_id, date, status } = req.body;
     await pool.query(
@@ -53,7 +53,7 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
   }
 });
 
-router.post('/bulk', authorizeRoles('docente', 'admin'), async (req, res) => {
+router.post('/bulk', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res) => {
   try {
     const { records } = req.body; // [{student_id, date, status}]
     if (!records || !records.length) return res.status(400).json({ error: 'Sin registros' });

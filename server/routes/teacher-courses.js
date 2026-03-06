@@ -8,21 +8,19 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
   try {
     let query, params;
-    if (req.user.role === 'docente') {
-      query = `SELECT tc.id, tc.teacher_id, tc.course_id, tc.grade_level_id, tc.period_id,
+    const cols = `tc.id, tc.teacher_id, tc.course_id, tc.grade_level_id, tc.period_id,
+        COALESCE(tc.eval_names, '["N1","N2","N3"]') as eval_names,
         c.name as course_name, c.color, gl.name as grade_name, gl.section,
-        u.full_name as teacher_name
-        FROM teacher_courses tc
+        u.full_name as teacher_name`;
+    if (req.user.role === 'docente') {
+      query = `SELECT ${cols} FROM teacher_courses tc
         JOIN courses c ON tc.course_id = c.id
         JOIN grade_levels gl ON tc.grade_level_id = gl.id
         JOIN users u ON tc.teacher_id = u.id
         WHERE tc.teacher_id = ?`;
       params = [req.user.id];
     } else if (req.user.role === 'padre') {
-      query = `SELECT tc.id, tc.teacher_id, tc.course_id, tc.grade_level_id, tc.period_id,
-        c.name as course_name, c.color, gl.name as grade_name, gl.section,
-        u.full_name as teacher_name
-        FROM teacher_courses tc
+      query = `SELECT ${cols} FROM teacher_courses tc
         JOIN courses c ON tc.course_id = c.id
         JOIN grade_levels gl ON tc.grade_level_id = gl.id
         JOIN users u ON tc.teacher_id = u.id
@@ -30,10 +28,7 @@ router.get('/', async (req, res) => {
         JOIN students s ON ps.student_id = s.id AND s.grade_level_id = tc.grade_level_id`;
       params = [req.user.id];
     } else {
-      query = `SELECT tc.id, tc.teacher_id, tc.course_id, tc.grade_level_id, tc.period_id,
-        c.name as course_name, c.color, gl.name as grade_name, gl.section,
-        u.full_name as teacher_name
-        FROM teacher_courses tc
+      query = `SELECT ${cols} FROM teacher_courses tc
         JOIN courses c ON tc.course_id = c.id
         JOIN grade_levels gl ON tc.grade_level_id = gl.id
         JOIN users u ON tc.teacher_id = u.id`;
@@ -57,6 +52,24 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     res.status(201).json({ id: result[0].id });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Asignación ya existe' });
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+router.put('/:id/eval-names', authorizeRoles('docente', 'admin'), async (req, res) => {
+  try {
+    const { eval_names } = req.body;
+    if (!Array.isArray(eval_names) || eval_names.length === 0)
+      return res.status(400).json({ error: 'eval_names debe ser un arreglo no vacío' });
+    if (req.user.role === 'docente') {
+      await pool.query('UPDATE teacher_courses SET eval_names=? WHERE id=? AND teacher_id=?',
+        [JSON.stringify(eval_names), req.params.id, req.user.id]);
+    } else {
+      await pool.query('UPDATE teacher_courses SET eval_names=? WHERE id=?',
+        [JSON.stringify(eval_names), req.params.id]);
+    }
+    res.json({ message: 'Evaluaciones actualizadas' });
+  } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

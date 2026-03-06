@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
+router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res) => {
   try {
     const { course_id, grade_level_id, title, body, type } = req.body;
     const [result] = await pool.query(

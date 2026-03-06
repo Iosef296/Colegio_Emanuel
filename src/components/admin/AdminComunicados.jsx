@@ -4,14 +4,24 @@ import Icon from '../common/Icon';
 
 export default function AdminComunicados() {
   const [comunicados, setComunicados] = useState([]);
+  const [gradeLevels, setGradeLevels] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editando, setEditando] = useState(null); // { id, title, body }
+  const [editando, setEditando] = useState(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ title: '', body: '', type: 'general', grade_level_id: '', course_id: '' });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const load = () => api.get('/communications').then(setComunicados).catch(console.error).finally(() => setLoading(false));
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    Promise.all([load(), api.get('/grade-levels'), api.get('/courses')])
+      .then(([, gl, c]) => { setGradeLevels(gl); setCourses(c); })
+      .catch(console.error);
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -36,6 +46,28 @@ export default function AdminComunicados() {
     }
   };
 
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError('');
+    try {
+      await api.post('/communications', {
+        title: createForm.title,
+        body: createForm.body,
+        type: createForm.type,
+        grade_level_id: createForm.grade_level_id ? Number(createForm.grade_level_id) : null,
+        course_id: createForm.course_id ? Number(createForm.course_id) : null,
+      });
+      setShowCreate(false);
+      setCreateForm({ title: '', body: '', type: 'general', grade_level_id: '', course_id: '' });
+      load();
+    } catch (err) {
+      setCreateError(err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const formatDate = (d) => new Date(d).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
 
   const typeLabel = { general: 'General', curso: 'Curso', grado: 'Grado', tarea: 'Tarea' };
@@ -47,8 +79,16 @@ export default function AdminComunicados() {
   return (
     <div>
       <div className="page-header">
-        <h1>Comunicados</h1>
-        <p>Gestionar todos los comunicados y avisos</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>Comunicados</h1>
+            <p>Gestionar todos los comunicados y avisos</p>
+          </div>
+          <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }}
+            onClick={() => setShowCreate(true)}>
+            + Nuevo
+          </button>
+        </div>
       </div>
 
       <div className="content-area">
@@ -84,6 +124,58 @@ export default function AdminComunicados() {
         ))}
       </div>
 
+      {/* Create modal */}
+      {showCreate && (
+        <div className="modal-overlay" onClick={() => setShowCreate(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Nuevo Comunicado</h3>
+            {createError && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: '#FEE2E2', color: 'var(--danger)', fontSize: 13 }}>{createError}</div>}
+            <form onSubmit={handleCreate}>
+              <div className="form-group">
+                <label className="form-label">Tipo</label>
+                <select className="form-select" value={createForm.type} onChange={e => setCreateForm({ ...createForm, type: e.target.value, grade_level_id: '', course_id: '' })}>
+                  <option value="general">General (todos)</option>
+                  <option value="grado">Por grado</option>
+                  <option value="curso">Por curso</option>
+                </select>
+              </div>
+              {createForm.type === 'grado' && (
+                <div className="form-group">
+                  <label className="form-label">Grado</label>
+                  <select className="form-select" value={createForm.grade_level_id} onChange={e => setCreateForm({ ...createForm, grade_level_id: e.target.value })} required>
+                    <option value="">Seleccionar...</option>
+                    {gradeLevels.map(gl => <option key={gl.id} value={gl.id}>{gl.name}{gl.section ? ` "${gl.section}"` : ''}</option>)}
+                  </select>
+                </div>
+              )}
+              {createForm.type === 'curso' && (
+                <div className="form-group">
+                  <label className="form-label">Curso</label>
+                  <select className="form-select" value={createForm.course_id} onChange={e => setCreateForm({ ...createForm, course_id: e.target.value })} required>
+                    <option value="">Seleccionar...</option>
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Título</label>
+                <input className="form-input" value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mensaje</label>
+                <textarea className="form-textarea" rows={4} value={createForm.body} onChange={e => setCreateForm({ ...createForm, body: e.target.value })} required />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="submit" className="btn btn-primary" disabled={creating} style={{ flex: 1, justifyContent: 'center' }}>
+                  {creating ? 'Publicando...' : 'Publicar'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Edit modal */}
       {editando && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}
@@ -92,13 +184,11 @@ export default function AdminComunicados() {
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Editar comunicado</h3>
             <div className="form-group">
               <label className="form-label">Título</label>
-              <input className="form-input" value={editando.title}
-                onChange={e => setEditando(p => ({ ...p, title: e.target.value }))} />
+              <input className="form-input" value={editando.title} onChange={e => setEditando(p => ({ ...p, title: e.target.value }))} />
             </div>
             <div className="form-group">
               <label className="form-label">Contenido</label>
-              <textarea className="form-textarea" rows={4} value={editando.body}
-                onChange={e => setEditando(p => ({ ...p, body: e.target.value }))} />
+              <textarea className="form-textarea" rows={4} value={editando.body} onChange={e => setEditando(p => ({ ...p, body: e.target.value }))} />
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button onClick={() => setEditando(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>

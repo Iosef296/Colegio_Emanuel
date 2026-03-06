@@ -68,13 +68,13 @@ export default function DocenteAttendance() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) return;
-    const scale = Math.min(1, 400 / video.videoWidth);
+    const scale = Math.min(1, 640 / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
     if (code && !scannedRef.current.has(code.data)) {
       const student = students.find(s => s.codigo === code.data);
       if (student) {

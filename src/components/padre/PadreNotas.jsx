@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
+import Icon from '../common/Icon';
 
 export default function PadreNotas() {
   const [grades, setGrades] = useState([]);
+  const [mesActualPagado, setMesActualPagado] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showPayModal, setShowPayModal] = useState(false);
 
   useEffect(() => {
-    api.get('/grades').then(setGrades).catch(console.error).finally(() => setLoading(false));
+    Promise.all([
+      api.get('/grades'),
+      api.get('/dashboard/padre'),
+    ]).then(([g, d]) => {
+      setGrades(g);
+      setMesActualPagado(d?.stats?.mesActualPagado || false);
+    }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="loading">Cargando...</div>;
@@ -34,6 +43,22 @@ export default function PadreNotas() {
     return v >= 15 ? 'var(--success)' : v >= 11 ? 'var(--warning)' : 'var(--danger)';
   };
 
+  const handleEyeClick = () => {
+    if (!mesActualPagado) setShowPayModal(true);
+  };
+
+  const EyeCell = ({ value, color }) => (
+    <span
+      style={{ textAlign: 'center', cursor: mesActualPagado ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={handleEyeClick}
+    >
+      {mesActualPagado
+        ? <span style={{ fontWeight: 700, color }}>{value ?? '-'}</span>
+        : <Icon name="eye" color="var(--text-muted)" size={14} />
+      }
+    </span>
+  );
+
   return (
     <div>
       <div className="page-header">
@@ -42,9 +67,17 @@ export default function PadreNotas() {
       </div>
       <div className="content-area">
         {/* Promedio General */}
-        <div style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', borderRadius: 18, padding: 20, marginBottom: 16, color: 'white', textAlign: 'center' }}>
+        <div
+          style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', borderRadius: 18, padding: 20, marginBottom: 16, color: 'white', textAlign: 'center', cursor: mesActualPagado ? 'default' : 'pointer' }}
+          onClick={handleEyeClick}
+        >
           <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Promedio General</p>
-          <p style={{ fontSize: 36, fontWeight: 800 }}>{promedioGeneral}</p>
+          {mesActualPagado
+            ? <p style={{ fontSize: 36, fontWeight: 800 }}>{promedioGeneral}</p>
+            : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Icon name="eye" color="white" size={24} />
+              </div>
+          }
         </div>
 
         {/* Table */}
@@ -58,15 +91,34 @@ export default function PadreNotas() {
           {rows.map((n, i) => (
             <div key={i} className="table-row" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}>
               <span style={{ fontWeight: 600, fontSize: 12 }}>{n.name}</span>
-              {[n.n1, n.n2, n.n3].map((v, j) => (
-                <span key={j} style={{ textAlign: 'center', fontWeight: 700, color: scoreColor(v) }}>{v ?? '-'}</span>
-              ))}
-              <span style={{ textAlign: 'center', fontWeight: 800, color: 'var(--primary)' }}>{n.prom}</span>
+              <EyeCell value={n.n1} color={scoreColor(n.n1)} />
+              <EyeCell value={n.n2} color={scoreColor(n.n2)} />
+              <EyeCell value={n.n3} color={scoreColor(n.n3)} />
+              <EyeCell value={n.prom} color="var(--primary)" />
             </div>
           ))}
         </div>
         </div>
       </div>
+
+      {/* Payment required modal */}
+      {showPayModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          onClick={() => setShowPayModal(false)}
+        >
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Icon name="lock" color="var(--danger)" size={24} />
+            </div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Mensualidad pendiente</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>
+              Aún no se ha pagado la mensualidad del mes actual. Por favor realiza el pago para ver las notas.
+            </p>
+            <button onClick={() => setShowPayModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

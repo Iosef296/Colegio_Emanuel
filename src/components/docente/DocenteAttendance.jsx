@@ -63,20 +63,18 @@ export default function DocenteAttendance() {
     }
   };
 
-  // QR Scanner
+  // QR Scanner — downscale to 400px wide for faster jsQR processing
   const scanFrame = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2) {
-      animRef.current = requestAnimationFrame(scanFrame);
-      return;
-    }
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
+    if (!video || !canvas || video.readyState < 2) return;
+    const scale = Math.min(1, 400 / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
     if (code && !scannedRef.current.has(code.data)) {
       const student = students.find(s => s.codigo === code.data);
       if (student) {
@@ -86,7 +84,6 @@ export default function DocenteAttendance() {
         setTimeout(() => setScanMsg(''), 2000);
       }
     }
-    animRef.current = requestAnimationFrame(scanFrame);
   }, [students]);
 
   const startScanner = async () => {
@@ -94,14 +91,15 @@ export default function DocenteAttendance() {
     setScanMsg('');
     setShowScanner(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
       streamRef.current = stream;
-      // Wait for videoRef to be set after state update
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
-          animRef.current = requestAnimationFrame(scanFrame);
+          animRef.current = setInterval(scanFrame, 150);
         }
       }, 100);
     } catch {
@@ -111,7 +109,7 @@ export default function DocenteAttendance() {
   };
 
   const stopScanner = () => {
-    if (animRef.current) cancelAnimationFrame(animRef.current);
+    if (animRef.current) clearInterval(animRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     streamRef.current = null;
     setShowScanner(false);

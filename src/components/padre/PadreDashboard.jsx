@@ -12,6 +12,7 @@ export default function PadreDashboard() {
   const [loading, setLoading] = useState(true);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(false);
 
   useEffect(() => {
     api.get('/dashboard/padre').then(setData).catch(console.error).finally(() => setLoading(false));
@@ -92,17 +93,15 @@ export default function PadreDashboard() {
           <p className="stat-label">Tareas<br />Pendientes</p>
         </div>
         {/* Promedio — visible solo si mes actual pagado */}
-        <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', position: 'relative' }}>
-            {stats.mesActualPagado
-              ? <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>{stats.promedio || 0}</span>
-              : <Icon name="lock" color="var(--primary)" size={18} />
-            }
+        <div
+          className="stat-card"
+          style={{ flex: 1, minWidth: 90, cursor: 'pointer' }}
+          onClick={() => stats.mesActualPagado ? navigate('/padre/notas') : setShowPayModal(true)}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+            <Icon name="eye" color="var(--primary)" size={18} />
           </div>
-          <p className="stat-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-            <Icon name="eye" color="var(--text-muted)" size={11} />
-            Promedio<br />Actual
-          </p>
+          <p className="stat-label">Promedio<br />Actual</p>
         </div>
       </div>
 
@@ -128,6 +127,22 @@ export default function PadreDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Payment required modal */}
+      {showPayModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setShowPayModal(false)}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Icon name="lock" color="var(--danger)" size={24} />
+            </div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Mensualidad pendiente</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>
+              Aún no se ha pagado la mensualidad del mes actual. Por favor realiza el pago para ver las notas.
+            </p>
+            <button onClick={() => setShowPayModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
+          </div>
+        </div>
+      )}
 
       {/* QR Modal */}
       {showQr && student && (

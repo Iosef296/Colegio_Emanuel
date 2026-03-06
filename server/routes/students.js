@@ -72,9 +72,9 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     const firstFirstName = first_name.trim().split(/\s+/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     let username = `${firstLastName}.${firstFirstName}`;
 
-    // Handle duplicate usernames
-    const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
-    if (existing.length > 0) username = `${username}${id}`;
+    // Handle duplicate usernames with sequential counter
+    const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ?', [`${username}%`]);
+    if (existing[0].c > 0) username = `${username}${Number(existing[0].c) + 1}`;
 
     const password = dni || `alumno${id}`;
     const hash = await bcrypt.hash(password, 10);

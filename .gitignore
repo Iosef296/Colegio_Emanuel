@@ -4,3 +4,6 @@ dist
 build
 .vite
 .DS_Store
+*.keystore
+*.jks
+keystore.b64.txt

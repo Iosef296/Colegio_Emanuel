@@ -1,0 +1,12 @@
+{
+  "appId": "com.colegioemanuel.app",
+  "appName": "Colegio Emanuel",
+  "webDir": "dist",
+  "server": {
+    "url": "https://colegio-emanuel.pages.dev",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -26,6 +26,7 @@ const NAV_ITEMS = {
     { to: '/admin/cursos', icon: 'book', label: 'Cursos' },
     { to: '/admin/asignaciones', icon: 'clipboard', label: 'Asignaciones' },
     { to: '/admin/pagos', icon: 'dollar', label: 'Pagos' },
+    { to: '/admin/comunicados', icon: 'bell', label: 'Comunicados' },
   ],
 };
 
@@ -47,6 +48,7 @@ const MOBILE_NAV = {
     { to: '/admin/usuarios', icon: 'users', label: 'Profesores' },
     { to: '/admin/alumnos', icon: 'user', label: 'Alumnos' },
     { to: '/admin/pagos', icon: 'dollar', label: 'Pagos' },
+    { to: '/admin/comunicados', icon: 'bell', label: 'Avisos' },
   ],
 };
 

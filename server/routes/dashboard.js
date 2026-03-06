@@ -69,7 +69,6 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
       [student.id, currentMonthName, today.getFullYear()]
     );
     const paidVal = currentPayment[0]?.paid;
-    console.log('[dashboard/padre] payment check:', { student_id: student.id, month: currentMonthName, year: today.getFullYear(), paidVal, type: typeof paidVal, rows: currentPayment.length });
     const mesActualPagado = paidVal === true || Number(paidVal) === 1;
 
     // Unread communications count

@@ -43,6 +43,10 @@ pool.query('ALTER TABLE students ADD COLUMN IF NOT EXISTS codigo VARCHAR(20) UNI
   .then(() => console.log('DB: columna codigo OK'))
   .catch(err => console.error('DB migration error:', err.message));
 
+pool.query("ALTER TYPE communication_type ADD VALUE IF NOT EXISTS 'tarea'")
+  .then(() => console.log('DB: enum tarea OK'))
+  .catch(err => console.error('DB enum migration error:', err.message));
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

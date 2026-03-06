@@ -94,7 +94,7 @@ export default function PadreDashboard() {
         {/* Promedio — visible solo si mes actual pagado */}
         <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', position: 'relative' }}>
-            {!(stats.deudaVencida > 0)
+            {stats.mesActualPagado
               ? <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>{stats.promedio || 0}</span>
               : <Icon name="lock" color="var(--primary)" size={18} />
             }

@@ -18,6 +18,7 @@ export default function DocenteAttendance() {
   const streamRef = useRef(null);
   const animRef = useRef(null);
   const scannedRef = useRef(new Set());
+  const lastScanRef = useRef(0);
 
   useEffect(() => {
     Promise.all([api.get('/students'), api.get('/attendance')])
@@ -63,11 +64,17 @@ export default function DocenteAttendance() {
     }
   };
 
-  // QR Scanner — downscale to 400px wide for faster jsQR processing
-  const scanFrame = useCallback(() => {
+  // QR Scanner — rAF loop throttled to 150ms for speed + reliability
+  const scanFrame = useCallback((timestamp = 0) => {
+    animRef.current = requestAnimationFrame(scanFrame);
+
+    if (timestamp - lastScanRef.current < 150) return;
+    lastScanRef.current = timestamp;
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2) return;
+    if (!video || !canvas || video.readyState < 2 || !video.videoWidth) return;
+
     const scale = Math.min(1, 640 / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
@@ -75,6 +82,7 @@ export default function DocenteAttendance() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(imageData.data, imageData.width, imageData.height);
+
     if (code && !scannedRef.current.has(code.data)) {
       const student = students.find(s => s.codigo === code.data);
       if (student) {
@@ -99,7 +107,7 @@ export default function DocenteAttendance() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
-          animRef.current = setInterval(scanFrame, 150);
+          animRef.current = requestAnimationFrame(scanFrame);
         }
       }, 100);
     } catch {
@@ -109,7 +117,7 @@ export default function DocenteAttendance() {
   };
 
   const stopScanner = () => {
-    if (animRef.current) clearInterval(animRef.current);
+    if (animRef.current) cancelAnimationFrame(animRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     streamRef.current = null;
     setShowScanner(false);

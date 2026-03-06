@@ -21,7 +21,7 @@ export default function PadreDashboard() {
   useEffect(() => {
     const codigo = data?.student?.codigo;
     if (codigo) {
-      QRCode.toDataURL(codigo, { width: 220, margin: 2 })
+      QRCode.toDataURL(codigo, { width: 300, margin: 2, errorCorrectionLevel: 'H' })
         .then(url => setQrDataUrl(url))
         .catch(console.error);
     }
@@ -150,7 +150,7 @@ export default function PadreDashboard() {
           <div style={{ background: 'white', borderRadius: 16, padding: 24, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{student.name}</h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{student.grade} "{student.section}"</p>
-            <img src={qrDataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 12px' }} />
+            <img src={qrDataUrl} alt="QR Code" style={{ width: 280, height: 280, display: 'block', margin: '0 auto 12px' }} />
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: 'monospace' }}>{student.codigo}</p>
             <button onClick={() => setShowQr(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
           </div>

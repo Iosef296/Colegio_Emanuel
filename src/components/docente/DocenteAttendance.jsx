@@ -64,41 +64,61 @@ export default function DocenteAttendance() {
     }
   };
 
-  // QR Scanner — rAF loop throttled to 150ms for speed + reliability
-  const scanFrame = useCallback((timestamp = 0) => {
+  const detectorRef = useRef(null);
+
+  const handleDetected = useCallback((rawValue) => {
+    if (scannedRef.current.has(rawValue)) return;
+    const student = students.find(s => s.codigo === rawValue);
+    if (student) {
+      scannedRef.current.add(rawValue);
+      setRecords(prev => ({ ...prev, [student.id]: 'temprano' }));
+      setScanMsg(`✓ ${student.first_name} ${student.last_name}`);
+      setTimeout(() => setScanMsg(''), 2000);
+    }
+  }, [students]);
+
+  // Native BarcodeDetector (fast) with jsQR fallback
+  const scanFrame = useCallback(async (timestamp = 0) => {
     animRef.current = requestAnimationFrame(scanFrame);
 
     if (timestamp - lastScanRef.current < 50) return;
     lastScanRef.current = timestamp;
 
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2 || !video.videoWidth) return;
+    if (!video || video.readyState < 2 || !video.videoWidth) return;
 
+    // Use native BarcodeDetector if available (hardware-accelerated, much faster)
+    if (detectorRef.current) {
+      try {
+        const barcodes = await detectorRef.current.detect(video);
+        if (barcodes.length > 0) handleDetected(barcodes[0].rawValue);
+      } catch { /* ignore */ }
+      return;
+    }
+
+    // jsQR fallback
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const scale = Math.min(1, 400 / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    // dontInvert: our QR codes are dark-on-white, skipping inversion ~2x faster
     const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-
-    if (code && !scannedRef.current.has(code.data)) {
-      const student = students.find(s => s.codigo === code.data);
-      if (student) {
-        scannedRef.current.add(code.data);
-        setRecords(prev => ({ ...prev, [student.id]: 'temprano' }));
-        setScanMsg(`✓ ${student.first_name} ${student.last_name}`);
-        setTimeout(() => setScanMsg(''), 2000);
-      }
-    }
-  }, [students]);
+    if (code) handleDetected(code.data);
+  }, [handleDetected]);
 
   const startScanner = async () => {
     scannedRef.current.clear();
     lastScanRef.current = 0;
     setScanMsg('');
+    // Init native BarcodeDetector if supported
+    if ('BarcodeDetector' in window) {
+      detectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
+    } else {
+      detectorRef.current = null;
+    }
     setShowScanner(true);
     try {
       // Enumerate cameras and pick main back camera (avoid ultra-wide)

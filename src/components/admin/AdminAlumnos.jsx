@@ -127,6 +127,27 @@ export default function AdminAlumnos() {
     setQrDataUrl('');
   };
 
+  const handleDelete = async (s) => {
+    if (!confirm(`¿Eliminar a ${s.first_name} ${s.last_name}?`)) return;
+    try {
+      await api.delete(`/students/${s.id}`);
+      load();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleGeneratePayments = async () => {
+    if (!confirm('¿Generar mensualidades (Marzo-Diciembre) para todos los alumnos activos?')) return;
+    try {
+      const res = await api.post('/students/generate-payments', {});
+      alert(res.message);
+      load();
+    } catch (err) {
+      alert('Error al generar mensualidades');
+    }
+  };
+
   if (loading) return <div className="loading">Cargando...</div>;
 
   return (
@@ -137,9 +158,14 @@ export default function AdminAlumnos() {
             <h1>Alumnos</h1>
             <p>{students.length} alumnos registrados</p>
           </div>
-          <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }} onClick={() => { resetForm(); setShowForm(true); }}>
-            + Nuevo
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', fontSize: 11 }} onClick={handleGeneratePayments}>
+              Generar mensualidades
+            </button>
+            <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }} onClick={() => { resetForm(); setShowForm(true); }}>
+              + Nuevo
+            </button>
+          </div>
         </div>
       </div>
       <div className="content-area">
@@ -251,6 +277,9 @@ export default function AdminAlumnos() {
               </button>
               <button onClick={() => handleEdit(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
                 <Icon name="edit" size={14} />
+              </button>
+              <button onClick={() => handleDelete(s)} className="btn btn-sm btn-danger" style={{ padding: '4px 8px' }}>
+                <Icon name="trash" size={14} />
               </button>
             </div>
           </div>

@@ -6,6 +6,21 @@ import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 const router = Router();
 router.use(authenticateToken);
 
+const SCHOOL_MONTHS = ['Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+async function generatePayments(studentId, year) {
+  for (const month of SCHOOL_MONTHS) {
+    try {
+      await pool.query(
+        'INSERT INTO payments (student_id, month, year, amount, paid) VALUES (?,?,?,?,?)',
+        [studentId, month, year, 350, false]
+      );
+    } catch (err) {
+      if (err.code !== '23505') throw err; // ignore duplicates
+    }
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     let query, params;
@@ -69,7 +84,24 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     );
     await pool.query('INSERT INTO parent_student (parent_id, student_id) VALUES (?,?)', [userResult[0].id, id]);
 
+    // Auto-generate school year payments
+    await generatePayments(id, year);
+
     res.status(201).json({ id, codigo, username, password });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+router.post('/generate-payments', authorizeRoles('admin'), async (req, res) => {
+  try {
+    const year = new Date().getFullYear();
+    const [students] = await pool.query('SELECT id FROM students WHERE active = true');
+    for (const s of students) {
+      await generatePayments(s.id, year);
+    }
+    res.json({ message: `Mensualidades generadas para ${students.length} alumnos` });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });

@@ -47,6 +47,10 @@ pool.query("ALTER TYPE communication_type ADD VALUE IF NOT EXISTS 'tarea'")
   .then(() => console.log('DB: enum tarea OK'))
   .catch(err => console.error('DB enum migration error:', err.message));
 
+pool.query('ALTER TABLE daily_progress ADD COLUMN IF NOT EXISTS photo_url TEXT')
+  .then(() => console.log('DB: columna photo_url OK'))
+  .catch(err => console.error('DB migration error:', err.message));
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

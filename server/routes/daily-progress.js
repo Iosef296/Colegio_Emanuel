@@ -7,7 +7,7 @@ router.use(authenticateToken);
 
 router.get('/', async (req, res) => {
   try {
-    let query = `SELECT dp.id, dp.date, dp.content, dp.created_at,
+    let query = `SELECT dp.id, dp.date, dp.content, dp.photo_url, dp.created_at,
       c.name as course_name, c.color, u.full_name as teacher_name,
       dp.teacher_course_id
       FROM daily_progress dp
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
   try {
-    const { teacher_course_id, date, content } = req.body;
+    const { teacher_course_id, date, content, photo_url } = req.body;
 
     if (req.user.role === 'docente') {
       const [tc] = await pool.query('SELECT id FROM teacher_courses WHERE id=? AND teacher_id=?',
@@ -46,8 +46,8 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO daily_progress (teacher_course_id, date, content) VALUES (?,?,?) RETURNING id',
-      [teacher_course_id, date, content]
+      'INSERT INTO daily_progress (teacher_course_id, date, content, photo_url) VALUES (?,?,?,?) RETURNING id',
+      [teacher_course_id, date, content, photo_url || null]
     );
     res.status(201).json({ id: result[0].id });
   } catch (err) {

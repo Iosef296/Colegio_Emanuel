@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import jsQR from 'jsqr';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
 
@@ -9,27 +10,31 @@ export default function DocenteAttendance() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanMsg, setScanMsg] = useState('');
+
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const animRef = useRef(null);
+  const scannedRef = useRef(new Set());
 
   useEffect(() => {
-    Promise.all([
-      api.get('/students'),
-      api.get('/attendance'),
-    ]).then(([studs, att]) => {
-      setStudents(studs);
-      const existing = {};
-      att.forEach(a => {
-        if (a.date === date) existing[a.student_id] = a.status;
-      });
-      setRecords(existing);
-    }).catch(console.error).finally(() => setLoading(false));
+    Promise.all([api.get('/students'), api.get('/attendance')])
+      .then(([studs, att]) => {
+        setStudents(studs);
+        const existing = {};
+        att.forEach(a => { if (a.date === date) existing[a.student_id] = a.status; });
+        setRecords(existing);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     api.get('/attendance').then(att => {
       const existing = {};
-      att.forEach(a => {
-        if (a.date === date) existing[a.student_id] = a.status;
-      });
+      att.forEach(a => { if (a.date === date) existing[a.student_id] = a.status; });
       setRecords(existing);
     }).catch(console.error);
   }, [date]);
@@ -47,9 +52,7 @@ export default function DocenteAttendance() {
     setMessage('');
     try {
       const bulk = Object.entries(records).map(([student_id, status]) => ({
-        student_id: Number(student_id),
-        date,
-        status,
+        student_id: Number(student_id), date, status,
       }));
       await api.post('/attendance/bulk', { records: bulk });
       setMessage('Asistencia guardada correctamente');
@@ -58,6 +61,60 @@ export default function DocenteAttendance() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // QR Scanner
+  const scanFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState < 2) {
+      animRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code && !scannedRef.current.has(code.data)) {
+      const student = students.find(s => s.codigo === code.data);
+      if (student) {
+        scannedRef.current.add(code.data);
+        setRecords(prev => ({ ...prev, [student.id]: 'temprano' }));
+        setScanMsg(`✓ ${student.first_name} ${student.last_name}`);
+        setTimeout(() => setScanMsg(''), 2000);
+      }
+    }
+    animRef.current = requestAnimationFrame(scanFrame);
+  }, [students]);
+
+  const startScanner = async () => {
+    scannedRef.current.clear();
+    setScanMsg('');
+    setShowScanner(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      // Wait for videoRef to be set after state update
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+          animRef.current = requestAnimationFrame(scanFrame);
+        }
+      }, 100);
+    } catch {
+      setMessage('Error: No se pudo acceder a la cámara');
+      setShowScanner(false);
+    }
+  };
+
+  const stopScanner = () => {
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setShowScanner(false);
   };
 
   const statusInfo = {
@@ -72,18 +129,25 @@ export default function DocenteAttendance() {
   return (
     <div>
       <div className="page-header">
-        <h1>Asistencia</h1>
-        <p>Registro de asistencia diaria</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>Asistencia</h1>
+            <p>Registro de asistencia diaria</p>
+          </div>
+          <button
+            onClick={startScanner}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px' }}
+          >
+            <Icon name="qr" color="white" size={18} />
+            Escanear QR
+          </button>
+        </div>
       </div>
       <div className="content-area">
         <div className="card" style={{ marginBottom: 16 }}>
           <label className="form-label">Fecha</label>
-          <input
-            type="date"
-            className="form-input"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-          />
+          <input type="date" className="form-input" value={date} onChange={e => setDate(e.target.value)} />
         </div>
 
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
@@ -120,15 +184,47 @@ export default function DocenteAttendance() {
           );
         })}
 
-        <button
-          className="btn btn-primary"
-          onClick={handleSave}
-          disabled={saving}
-          style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
-        >
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}>
           {saving ? 'Guardando...' : 'Guardar Asistencia'}
         </button>
       </div>
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          <p style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>Escanear QR del alumno</p>
+
+          <div style={{ position: 'relative', width: 280, height: 280, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--primary)' }}>
+            <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} playsInline muted />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            {/* Corner guides */}
+            {['0 0', '0 auto auto 0', 'auto 0 0 auto', 'auto auto 0 0'].map((pos, i) => (
+              <div key={i} style={{
+                position: 'absolute',
+                width: 28, height: 28,
+                ...(i === 0 ? { top: 8, left: 8, borderTop: '3px solid #4ADE80', borderLeft: '3px solid #4ADE80' } :
+                   i === 1 ? { top: 8, right: 8, borderTop: '3px solid #4ADE80', borderRight: '3px solid #4ADE80' } :
+                   i === 2 ? { bottom: 8, left: 8, borderBottom: '3px solid #4ADE80', borderLeft: '3px solid #4ADE80' } :
+                              { bottom: 8, right: 8, borderBottom: '3px solid #4ADE80', borderRight: '3px solid #4ADE80' })
+              }} />
+            ))}
+          </div>
+
+          {scanMsg && (
+            <div style={{ background: '#D1FAE5', color: '#065F46', padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 700 }}>
+              {scanMsg}
+            </div>
+          )}
+
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+            {students.filter(s => records[s.id]).length} / {students.length} escaneados
+          </p>
+
+          <button onClick={stopScanner} className="btn btn-secondary" style={{ minWidth: 160 }}>
+            Cerrar escáner
+          </button>
+        </div>
+      )}
     </div>
   );
 }

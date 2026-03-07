@@ -1,4 +1,4 @@
-const CACHE = 'colegio-emanuel-v1';
+const CACHE = 'colegio-emanuel-v2';
 const OFFLINE_URL = '/';
 
 self.addEventListener('install', e => {

@@ -11,6 +11,13 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Push a floor entry once at startup so the back button can't exit the PWA.
+// React Router will replaceState this entry (merging its own idx/key) so it
+// doesn't interfere with React Router's internal history tracking.
+if (window.history.length <= 1) {
+  window.history.pushState({ __appFloor: true }, '', window.location.href);
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

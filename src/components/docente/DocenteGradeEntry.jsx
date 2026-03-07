@@ -24,11 +24,16 @@ export default function DocenteGradeEntry() {
     ]).then(([courses, studs, grds]) => {
       const c = courses.find(c => c.id === Number(id));
       setCourse(c);
+      let evalNamesArr;
       try {
-        setEvalNames(typeof c?.eval_names === 'string' ? JSON.parse(c.eval_names) : (c?.eval_names || ['N1', 'N2', 'N3']));
-      } catch { setEvalNames(['N1', 'N2', 'N3']); }
+        evalNamesArr = typeof c?.eval_names === 'string' ? JSON.parse(c.eval_names) : (c?.eval_names || ['N1', 'N2', 'N3']);
+      } catch { evalNamesArr = ['N1', 'N2', 'N3']; }
+      setEvalNames(evalNamesArr);
       setStudents(studs.sort((a, b) => a.last_name.localeCompare(b.last_name)));
       const gMap = {};
+      // Default all to 0
+      studs.forEach(s => evalNamesArr.forEach(n => { gMap[`${s.id}_${n}`] = 0; }));
+      // Override with existing grades
       grds.forEach(g => { gMap[`${g.student_id}_${g.evaluation_name}`] = g.score; });
       setGrades(gMap);
     });
@@ -47,7 +52,7 @@ export default function DocenteGradeEntry() {
     setMessage('');
     try {
       for (const [key, score] of Object.entries(grades)) {
-        if (score === '' || score == null) continue;
+        if (score === '' || score == null || score === undefined) continue;
         const parts = key.split('_');
         const student_id = parts[0];
         const evaluation_name = parts.slice(1).join('_');

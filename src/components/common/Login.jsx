@@ -11,7 +11,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     setError('');
     setLoading(true);
     try {
@@ -29,7 +29,7 @@ export default function Login() {
       <div className="login-card">
         <img src="/logo.png" alt="Colegio Emanuel" style={{ width: 160, marginBottom: 8 }} />
 
-        <form className="login-form" onSubmit={handleSubmit}>
+        <div className="login-form">
           <h3>Iniciar Sesión</h3>
 
           {error && <div className="login-error">{error}</div>}
@@ -41,7 +41,8 @@ export default function Login() {
               value={username}
               onChange={e => setUsername(e.target.value)}
               placeholder="usuario"
-              required
+              autoComplete="username"
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             />
           </div>
 
@@ -53,14 +54,16 @@ export default function Login() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              required
+              autoComplete="current-password"
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             />
           </div>
 
           <button
-            type="submit"
+            type="button"
             className="btn btn-primary"
             disabled={loading}
+            onClick={handleSubmit}
             style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
           >
             {loading ? 'Ingresando...' : 'Ingresar'}
@@ -74,7 +77,7 @@ export default function Login() {
               <p>quispe.pedro / admin123</p>
             </div>
           )}
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -63,7 +63,7 @@ export default function AdminUsuarios() {
   };
 
   const handleEdit = (u) => {
-    setEditForm({ full_name: u.full_name, password: '', dni: u.dni || '', email: u.email || '', phone: u.phone || '' });
+    setEditForm({ full_name: u.full_name, password: '', dni: u.dni || '', email: u.email || '', phone: u.phone || '', role: u.role });
     setEditing(u);
     setShowForm(true);
   };
@@ -77,7 +77,7 @@ export default function AdminUsuarios() {
         const data = { ...editForm };
         if (!data.password) delete data.password;
         await api.put(`/users/${editing.id}`, data);
-        setMessage('Profesor actualizado');
+        setMessage('Usuario actualizado');
         load();
         setTimeout(resetForm, 1000);
       } else {
@@ -182,6 +182,13 @@ export default function AdminUsuarios() {
                   <div className="form-group">
                     <label className="form-label">Teléfono</label>
                     <input className="form-input" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Rol</label>
+                    <select className="form-select" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
+                      <option value="docente">Docente</option>
+                      <option value="auxiliar">Auxiliar</option>
+                    </select>
                   </div>
                 </>
               ) : (

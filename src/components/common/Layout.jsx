@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Icon from './Icon';
 
@@ -65,6 +66,21 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const items = NAV_ITEMS[user?.role] || [];
   const mobileItems = MOBILE_NAV[user?.role] || [];
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (window.__scannerOpen) return;
+      // Fire when we've reached the floor entry (idx=0 or __appFloor) or the
+      // original PWA entry below it (no idx at all). Push a new floor so the
+      // next back press doesn't exit the app.
+      const s = e.state;
+      if (!s?.idx || s?.__appFloor) {
+        window.history.pushState({ __appFloor: true }, '', window.location.href);
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
 
   const handleLogout = () => {
     logout();

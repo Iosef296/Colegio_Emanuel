@@ -19,6 +19,7 @@ export default function DocenteAttendance() {
   const animRef = useRef(null);
   const scannedRef = useRef(new Set());
   const lastScanRef = useRef(0);
+  const popstateHandlerRef = useRef(null);
 
   useEffect(() => {
     Promise.all([api.get('/students'), api.get('/attendance')])
@@ -113,6 +114,10 @@ export default function DocenteAttendance() {
     scannedRef.current.clear();
     lastScanRef.current = 0;
     setScanMsg('');
+    history.pushState({ scanner: true }, '');
+    window.__scannerOpen = true;
+    popstateHandlerRef.current = () => stopScanner(true);
+    window.addEventListener('popstate', popstateHandlerRef.current);
     // Init native BarcodeDetector if supported
     if ('BarcodeDetector' in window) {
       detectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
@@ -154,11 +159,17 @@ export default function DocenteAttendance() {
     }
   };
 
-  const stopScanner = () => {
+  const stopScanner = (fromPopstate = false) => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     streamRef.current = null;
+    window.__scannerOpen = false;
     setShowScanner(false);
+    if (popstateHandlerRef.current) {
+      window.removeEventListener('popstate', popstateHandlerRef.current);
+      popstateHandlerRef.current = null;
+    }
+    if (!fromPopstate) history.back();
   };
 
   const statusInfo = {
@@ -259,10 +270,6 @@ export default function DocenteAttendance() {
               {scanMsg}
             </div>
           )}
-
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-            {students.filter(s => records[s.id]).length} / {students.length} escaneados
-          </p>
 
           <button onClick={stopScanner} className="btn btn-secondary" style={{ minWidth: 160 }}>
             Cerrar escáner

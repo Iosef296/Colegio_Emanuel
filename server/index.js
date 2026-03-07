@@ -55,6 +55,10 @@ pool.query(`ALTER TABLE teacher_courses ADD COLUMN IF NOT EXISTS eval_names TEXT
   .then(() => console.log('DB: columna eval_names OK'))
   .catch(err => console.error('DB migration error:', err.message));
 
+pool.query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'auxiliar'`)
+  .then(() => console.log('DB: user_role enum OK'))
+  .catch(err => console.error('DB migration error:', err.message));
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

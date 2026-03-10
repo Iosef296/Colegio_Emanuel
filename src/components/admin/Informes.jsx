@@ -219,7 +219,7 @@ function StudentDetail({ student }) {
             : Object.keys(byCourse).length === 0
             ? <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin notas</p>
             : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, alignItems: 'start' }}>
                 {Object.entries(byCourse).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([course, { color, evals }]) => {
                   const avg = evals.length ? (evals.reduce((s, g) => s + Number(g.score), 0) / evals.length) : null;
                   const avgColor = avg !== null ? (avg >= 11 ? '#16A34A' : '#DC2626') : 'var(--text-muted)';

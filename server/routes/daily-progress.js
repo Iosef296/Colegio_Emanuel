@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
   try {
     let query = `SELECT dp.id, dp.date, dp.title, dp.content, dp.photo_url, dp.attachments, dp.created_at,
       c.name as course_name, c.color, u.full_name as teacher_name,
-      dp.teacher_course_id
+      dp.teacher_course_id, tc.grade_level_id
       FROM daily_progress dp
       JOIN teacher_courses tc ON dp.teacher_course_id = tc.id
       JOIN courses c ON tc.course_id = c.id

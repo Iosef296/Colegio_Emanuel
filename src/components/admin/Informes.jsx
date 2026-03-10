@@ -142,16 +142,23 @@ function AttendanceCalendar({ attendance }) {
   );
 }
 
+const MONTH_NAMES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 function StudentDetail({ student }) {
   const [attendance, setAttendance] = useState(null);
   const [grades, setGrades] = useState(null);
   const [comms, setComms] = useState(null);
+  const [payments, setPayments] = useState(null);
   const [open, setOpen] = useState({ asistencia: false, notas: false, comunicados: false });
 
+  const currentMonth = MONTH_NAMES_ES[new Date().getMonth()];
+  const currentYear = new Date().getFullYear();
+
   useEffect(() => {
-    setAttendance(null); setGrades(null); setComms(null);
+    setAttendance(null); setGrades(null); setComms(null); setPayments(null);
     setOpen({ asistencia: false, notas: false, comunicados: false });
     setOpenCourses({});
+    api.get(`/payments?student_id=${student.id}`).then(setPayments).catch(console.error);
     api.get(`/attendance?student_id=${student.id}`).then(setAttendance).catch(console.error);
     api.get(`/grades?student_id=${student.id}`).then(setGrades).catch(console.error);
     api.get('/communications').then(data => {
@@ -180,8 +187,18 @@ function StudentDetail({ student }) {
   const [openCourses, setOpenCourses] = useState({});
   const toggleCourse = (k) => setOpenCourses(s => ({ ...s, [k]: !s[k] }));
 
+  const paid = payments?.some(p => p.paid && p.month === currentMonth && p.year === currentYear);
+  const paymentLabel = payments === null ? null : paid ? 'Pagado' : 'Pendiente';
+
   return (
     <div>
+      {paymentLabel && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: paid ? '#D1FAE5' : '#FEE2E2', color: paid ? '#16A34A' : '#DC2626' }}>
+            {currentMonth} {currentYear}: {paymentLabel}
+          </span>
+        </div>
+      )}
       {/* Asistencia */}
       <div style={{ marginBottom: 16 }}>
         {sectionHeader('Asistencia', open.asistencia, () => toggle('asistencia'))}

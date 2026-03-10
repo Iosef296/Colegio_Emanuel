@@ -225,10 +225,6 @@ export default function AdminGrados() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 700 }}>{s.first_name} {s.last_name}</p>
                   </div>
-                  {/* Payment badge */}
-                  <div style={{ flexShrink: 0, padding: '3px 8px', borderRadius: 20, background: paid ? '#D1FAE5' : '#FEE2E2', color: paid ? 'var(--success)' : 'var(--danger)', fontSize: 11, fontWeight: 700 }}>
-                    {paid ? 'Pagado' : 'Pendiente'}
-                  </div>
                   {/* Average + toggle */}
                   {avg !== null && (
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>

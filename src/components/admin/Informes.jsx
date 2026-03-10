@@ -344,20 +344,28 @@ export default function Informes() {
         {filtered.length === 0 ? (
           <div className="empty-state"><p>Sin resultados</p></div>
         ) : (
-          Object.entries(byGrade).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([grade, gradeStudents]) => (
-            <div key={grade} style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>{grade}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {gradeStudents.map(s => (
-                  <div key={s.id} className="card" style={{ cursor: 'pointer', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                    onClick={() => setSelected(s)}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{s.last_name}, {s.first_name}</span>
-                    <span style={{ fontSize: 18, color: 'var(--text-muted)', lineHeight: 1 }}>›</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, alignItems: 'start' }}>
+            {Object.entries(byGrade)
+              .sort((a, b) => {
+                const n = s => parseInt(s[0].match(/\d+/) || 0);
+                return n(a) - n(b) || a[0].localeCompare(b[0], 'es');
+              })
+              .map(([grade, gradeStudents]) => (
+                <div key={grade} className="card" style={{ padding: '10px 12px' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>{grade}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {gradeStudents.map(s => (
+                      <div key={s.id} style={{ cursor: 'pointer', padding: '7px 8px', borderRadius: 8, background: 'var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        onClick={() => setSelected(s)}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{s.last_name}, {s.first_name}</span>
+                        <span style={{ fontSize: 16, color: 'var(--text-muted)', lineHeight: 1 }}>›</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          ))
+                </div>
+              ))
+            }
+          </div>
         )}
       </div>
     </div>

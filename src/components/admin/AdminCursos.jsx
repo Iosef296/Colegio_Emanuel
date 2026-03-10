@@ -45,7 +45,7 @@ export default function AdminCursos() {
           </div>
         </div>
         <div className="content-area">
-          <AvancesLista avances={avances} />
+          <AvancesLista avances={avances} hideCourseLabel />
         </div>
       </div>
     );

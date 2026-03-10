@@ -68,7 +68,7 @@ function groupAvances(avances) {
     });
 }
 
-export default function AvancesLista({ avances, onEdit }) {
+export default function AvancesLista({ avances, onEdit, hideCourseLabel = false }) {
   const [collapsedMonths, setCollapsedMonths] = useState({});
   const [collapsedWeeks, setCollapsedWeeks] = useState({});
   const [collapsedDays, setCollapsedDays] = useState({});
@@ -121,13 +121,15 @@ export default function AvancesLista({ avances, onEdit }) {
                           return (
                             <div key={ci} style={{ marginBottom: 8, paddingLeft: 8, borderLeft: `3px solid ${course.color || 'var(--primary)'}` }}>
                               {/* Course header */}
-                              <div onClick={() => toggle(setCollapsedCourses, courseKey)}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: courseCollapsed ? 0 : 6, cursor: 'pointer', userSelect: 'none' }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: course.color || 'var(--primary)' }}>{course.name}</span>
-                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{courseCollapsed ? '▶' : '▼'}</span>
-                              </div>
+                              {!hideCourseLabel && (
+                                <div onClick={() => toggle(setCollapsedCourses, courseKey)}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: courseCollapsed ? 0 : 6, cursor: 'pointer', userSelect: 'none' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: course.color || 'var(--primary)' }}>{course.name}</span>
+                                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{courseCollapsed ? '▶' : '▼'}</span>
+                                </div>
+                              )}
 
-                              {!courseCollapsed && course.items.map((a, ai) => (
+                              {(hideCourseLabel || !courseCollapsed) && course.items.map((a, ai) => (
                                 <div key={ai} className="card" style={{ marginBottom: 6 }}>
                                   {onEdit && (
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>

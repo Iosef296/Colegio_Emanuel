@@ -22,7 +22,7 @@ const sectionHeader = (title, open, onToggle, extra = null) => (
 
 function AttendanceCalendar({ attendance }) {
   const [openMonths, setOpenMonths] = useState({});
-  const toggleMonth = (key) => setOpenMonths(s => ({ ...s, [key]: s[key] === false ? true : false }));
+  const toggleMonth = (key) => setOpenMonths(s => ({ ...s, [key]: !s[key] }));
 
   // Group by year-month, then by day → { mañana: status, tarde: status }
   const byMonth = {};
@@ -77,7 +77,7 @@ function AttendanceCalendar({ attendance }) {
           ['mañana','tarde'].forEach(t => { if (rec[t]) monthCounts[rec[t]] = (monthCounts[rec[t]] || 0) + 1; });
         });
 
-        const isOpen = openMonths[key] !== false;
+        const isOpen = openMonths[key] === true;
         return (
           <div key={key} style={{ marginBottom: 16 }}>
             <div onClick={() => toggleMonth(key)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: isOpen ? 10 : 0, cursor: 'pointer', userSelect: 'none', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
@@ -194,7 +194,7 @@ function StudentDetail({ student }) {
 
   const toggle = (k) => setOpen(s => ({ ...s, [k]: !s[k] }));
   const [openCourses, setOpenCourses] = useState({});
-  const toggleCourse = (k) => setOpenCourses(s => ({ ...s, [k]: s[k] === false ? true : false }));
+  const toggleCourse = (k) => setOpenCourses(s => ({ ...s, [k]: !s[k] }));
 
   return (
     <div>
@@ -223,7 +223,7 @@ function StudentDetail({ student }) {
                 {Object.entries(byCourse).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([course, { color, evals }]) => {
                   const avg = evals.length ? (evals.reduce((s, g) => s + Number(g.score), 0) / evals.length) : null;
                   const avgColor = avg !== null ? (avg >= 11 ? '#16A34A' : '#DC2626') : 'var(--text-muted)';
-                  const courseOpen = openCourses[course] !== false;
+                  const courseOpen = openCourses[course] === true;
                   return (
                     <div key={course} style={{ border: `2px solid ${color || 'var(--border)'}`, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }}>
                       <div onClick={() => toggleCourse(course)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', padding: '8px 10px' }}>

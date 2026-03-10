@@ -43,7 +43,7 @@ function groupAvances(avances) {
   });
 
   return Object.entries(months)
-    .sort(([a], [b]) => b.localeCompare(a))
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([monthKey, monthData]) => {
       const sortedWeekEntries = Object.entries(monthData.weeks)
         .sort(([a], [b]) => a.localeCompare(b)); // ascending for numbering

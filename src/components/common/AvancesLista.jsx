@@ -18,6 +18,12 @@ function getWeekMonday(dateStr) {
   return monday;
 }
 
+function weekNumInMonth(year, month, weekMondayStr) {
+  const firstMonday = getWeekMonday(`${year}-${String(month).padStart(2,'0')}-01`);
+  const weekMonday = new Date(weekMondayStr + 'T12:00:00');
+  return Math.round((weekMonday - firstMonday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
+
 function dayLabel(dateStr) {
   const d = new Date(normDate(dateStr) + 'T12:00:00');
   return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
@@ -53,9 +59,9 @@ function groupAvances(avances) {
         year: monthData.year,
         month: monthData.month,
         weeks: sortedWeekEntries
-          .map(([weekKey, week], idx) => ({
+          .map(([weekKey, week]) => ({
             key: weekKey,
-            weekNum: idx + 1,
+            weekNum: weekNumInMonth(monthData.year, monthData.month + 1, weekKey),
             days: Object.entries(week.days)
               .sort(([a], [b]) => a.localeCompare(b))
               .map(([dateKey, courses]) => ({

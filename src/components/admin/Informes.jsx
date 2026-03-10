@@ -211,6 +211,47 @@ function StudentDetail({ student }) {
         )}
       </div>
 
+      {/* Notas */}
+      <div style={{ marginBottom: 16 }}>
+        {sectionHeader('Notas', open.notas, () => toggle('notas'))}
+        {open.notas && (
+          byCourse === null
+            ? <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Cargando...</p>
+            : Object.keys(byCourse).length === 0
+            ? <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin notas</p>
+            : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, alignItems: 'start' }}>
+                {Object.entries(byCourse).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([course, { color, evals }]) => {
+                  const avg = evals.length ? (evals.reduce((s, g) => s + Number(g.score), 0) / evals.length) : null;
+                  const avgColor = avg !== null ? (avg >= 11 ? '#16A34A' : '#DC2626') : 'var(--text-muted)';
+                  const courseOpen = openCourses[course] === true;
+                  return (
+                    <div key={course} style={{ border: `2px solid ${color || 'var(--border)'}`, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }}>
+                      <div onClick={() => toggleCourse(course)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', padding: '8px 10px' }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: color || 'var(--primary)', margin: 0 }}>{course}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {avg !== null && <span style={{ fontSize: 15, fontWeight: 800, color: avgColor }}>{avg.toFixed(1)}</span>}
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{courseOpen ? '▼' : '▶'}</span>
+                        </div>
+                      </div>
+                      {courseOpen && (
+                        <div style={{ borderTop: `1px solid ${color || 'var(--border)'}`, padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {evals.map(g => (
+                            <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{g.evaluation_name}</span>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: g.score >= 11 ? '#16A34A' : '#DC2626' }}>{g.score}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+        )}
+      </div>
+
       {/* Comunicados personales */}
       <div style={{ marginBottom: 16 }}>
         {sectionHeader(

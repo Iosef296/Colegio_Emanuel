@@ -225,8 +225,8 @@ function StudentDetail({ student }) {
                   const avgColor = avg !== null ? (avg >= 11 ? '#16A34A' : '#DC2626') : 'var(--text-muted)';
                   const courseOpen = openCourses[course] !== false;
                   return (
-                    <div key={course} style={{ border: `2px solid ${color || 'var(--border)'}`, borderRadius: 10, padding: '8px 10px', background: 'var(--bg)' }}>
-                      <div onClick={() => toggleCourse(course)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: courseOpen ? 8 : 0 }}>
+                    <div key={course} style={{ border: `2px solid ${color || 'var(--border)'}`, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }}>
+                      <div onClick={() => toggleCourse(course)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', padding: '8px 10px' }}>
                         <p style={{ fontSize: 13, fontWeight: 700, color: color || 'var(--primary)', margin: 0 }}>{course}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {avg !== null && <span style={{ fontSize: 15, fontWeight: 800, color: avgColor }}>{avg.toFixed(1)}</span>}
@@ -234,11 +234,11 @@ function StudentDetail({ student }) {
                         </div>
                       </div>
                       {courseOpen && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ borderTop: `1px solid ${color || 'var(--border)'}`, padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {evals.map(g => (
                             <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{g.evaluation_name}</span>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: g.score >= 11 ? '#16A34A' : '#DC2626' }}>{g.score}</span>
+                              <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{g.evaluation_name}</span>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: g.score >= 11 ? '#16A34A' : '#DC2626' }}>{g.score}</span>
                             </div>
                           ))}
                         </div>

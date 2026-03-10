@@ -290,6 +290,9 @@ export default function Informes() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
 
+  const [openGrades, setOpenGrades] = useState({});
+  const toggleGrade = (k) => setOpenGrades(s => ({ ...s, [k]: !s[k] }));
+
   const load = useCallback(() => {
     api.get('/students').then(data => { setStudents(data); setLoading(false); }).catch(console.error);
   }, []);
@@ -350,20 +353,31 @@ export default function Informes() {
                 const n = s => parseInt(s[0].match(/\d+/) || 0);
                 return n(a) - n(b) || a[0].localeCompare(b[0], 'es');
               })
-              .map(([grade, gradeStudents]) => (
-                <div key={grade} className="card" style={{ padding: '10px 12px' }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>{grade}</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {gradeStudents.map(s => (
-                      <div key={s.id} style={{ cursor: 'pointer', padding: '7px 8px', borderRadius: 8, background: 'var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                        onClick={() => setSelected(s)}>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{s.last_name}, {s.first_name}</span>
-                        <span style={{ fontSize: 16, color: 'var(--text-muted)', lineHeight: 1 }}>›</span>
+              .map(([grade, gradeStudents]) => {
+                const isOpen = openGrades[grade] === true;
+                return (
+                  <div key={grade} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div onClick={() => toggleGrade(grade)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', padding: '10px 12px' }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>{grade}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: 20, padding: '1px 7px', fontWeight: 600 }}>{gradeStudents.length}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                       </div>
-                    ))}
+                    </div>
+                    {isOpen && (
+                      <div style={{ borderTop: '1px solid var(--border)', padding: '6px 12px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {gradeStudents.map(s => (
+                          <div key={s.id} style={{ cursor: 'pointer', padding: '7px 8px', borderRadius: 8, background: 'var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            onClick={() => setSelected(s)}>
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>{s.last_name}, {s.first_name}</span>
+                            <span style={{ fontSize: 16, color: 'var(--text-muted)', lineHeight: 1 }}>›</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             }
           </div>
         )}

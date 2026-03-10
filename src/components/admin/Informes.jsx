@@ -44,32 +44,19 @@ function AttendanceCalendar({ attendance }) {
         const daysInMonth = new Date(y, mo, 0).getDate();
         const pad = n => String(n).padStart(2, '0');
 
-        // Build weeks Mon–Fri, attach Sat/Sun only if they have records
+        // Build weeks Sun–Sat, week number = Math.ceil(firstDay / 7)
         const weeks = [];
-        let weekdays = [];
+        let currentWeek = [];
         for (let d = 1; d <= daysInMonth; d++) {
           const dow = new Date(y, mo - 1, d).getDay();
-          if (dow >= 1 && dow <= 5) {
-            weekdays.push(d);
-            if (dow === 5 || d === daysInMonth) {
-              weeks.push({ days: [...weekdays], sat: null, sun: null });
-              weekdays = [];
-            }
-          }
+          if (dow === 0 && currentWeek.length > 0) { weeks.push([...currentWeek]); currentWeek = []; }
+          currentWeek.push(d);
         }
-        if (weekdays.length > 0) weeks.push({ days: [...weekdays], sat: null, sun: null });
-        weeks.forEach(week => {
-          const last = Math.max(...week.days);
-          const satD = last + 1, sunD = last + 2;
-          if (satD <= daysInMonth && new Date(y, mo - 1, satD).getDay() === 6 && dayMap[satD]) week.sat = satD;
-          if (sunD <= daysInMonth && new Date(y, mo - 1, sunD).getDay() === 0 && dayMap[sunD]) week.sun = sunD;
-        });
+        if (currentWeek.length > 0) weeks.push([...currentWeek]);
 
-        const hasSat = weeks.some(w => w.sat);
-        const hasSun = weeks.some(w => w.sun);
-        const colCount = 5 + (hasSat ? 1 : 0) + (hasSun ? 1 : 0);
-        const headers = ['L','M','Mi','J','V',...(hasSat?['S']:[]),...(hasSun?['D']:[])];
-        const dowList = [1,2,3,4,5,...(hasSat?[6]:[]),...(hasSun?[0]:[])];
+        const colCount = 7;
+        const headers = ['D','L','M','Mi','J','V','S'];
+        const dowList = [0,1,2,3,4,5,6];
 
         // Per-month counts
         const monthCounts = {};
@@ -97,17 +84,14 @@ function AttendanceCalendar({ attendance }) {
                 <div key={h} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', padding: 4 }}>{h}</div>
               ))}
             </div>
-            {weeks.map((week, wi) => {
-              const wDays = dowList.map(dow => {
-                if (dow === 6) return week.sat || null;
-                if (dow === 0) return week.sun || null;
-                return week.days.find(d => new Date(y, mo - 1, d).getDay() === dow) || null;
-              });
+            {weeks.map((weekDays, wi) => {
+              const wDays = dowList.map(dow => weekDays.find(d => new Date(y, mo - 1, d).getDay() === dow) || null);
               const wRecs = wDays.map(d => d ? dayMap[d] : null);
               const wHasTarde = wRecs.some(r => r?.['tarde']);
+              const weekNum = Math.ceil(weekDays[0] / 7);
               return (
                 <div key={wi}>
-                  <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '8px 0 4px', fontWeight: 600 }}>Semana {wi + 1}</p>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '8px 0 4px', fontWeight: 600 }}>Semana {weekNum}</p>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
                     {wDays.map((d, i) => {
                       if (!d) return <div key={i} style={{ flex: 1 }} />;

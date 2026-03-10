@@ -55,38 +55,19 @@ export default function PadreAsistencia() {
   const pad = n => String(n).padStart(2, '0');
   const dateStr = d => `${year}-${pad(selectedMonth)}-${pad(d)}`;
 
-  // Build weeks (Mon–Fri days), then attach Saturday/Sunday if they have records
+  // Build weeks Sun–Sat, week number = Math.ceil(firstDayOfWeek / 7)
   const weeks = [];
-  let weekdays = [];
+  let currentWeek = [];
   for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, selectedMonth - 1, d).getDay(); // 0=Sun,6=Sat
-    if (dow >= 1 && dow <= 5) {
-      weekdays.push(d);
-      if (dow === 5 || d === daysInMonth) {
-        weeks.push({ days: [...weekdays], sat: null });
-        weekdays = [];
-      }
-    }
+    const dow = new Date(year, selectedMonth - 1, d).getDay();
+    if (dow === 0 && currentWeek.length > 0) { weeks.push([...currentWeek]); currentWeek = []; }
+    currentWeek.push(d);
   }
-  if (weekdays.length > 0) weeks.push({ days: [...weekdays], sat: null });
+  if (currentWeek.length > 0) weeks.push([...currentWeek]);
 
-  weeks.forEach(week => {
-    const lastDay = Math.max(...week.days);
-    const satDay = lastDay + 1;
-    const sunDay = lastDay + 2;
-    if (satDay <= daysInMonth && new Date(year, selectedMonth - 1, satDay).getDay() === 6) {
-      if (byDate[dateStr(satDay)]) week.sat = satDay;
-    }
-    if (sunDay <= daysInMonth && new Date(year, selectedMonth - 1, sunDay).getDay() === 0) {
-      if (byDate[dateStr(sunDay)]) week.sun = sunDay;
-    }
-  });
-
-  const hasSat   = weeks.some(w => w.sat);
-  const hasSun   = weeks.some(w => w.sun);
-  const colCount = 5 + (hasSat ? 1 : 0) + (hasSun ? 1 : 0);
-  const headers  = ['L', 'M', 'Mi', 'J', 'V', ...(hasSat ? ['S'] : []), ...(hasSun ? ['D'] : [])];
-  const dowList  = [1, 2, 3, 4, 5, ...(hasSat ? [6] : []), ...(hasSun ? [0] : [])];
+  const colCount = 7;
+  const headers  = ['D', 'L', 'M', 'Mi', 'J', 'V', 'S'];
+  const dowList  = [0, 1, 2, 3, 4, 5, 6];
 
   const hasTardeAny = Object.values(byDate).some(r => r['tarde']);
 
@@ -154,19 +135,16 @@ export default function PadreAsistencia() {
               ))}
             </div>
 
-            {weeks.map((week, wi) => {
-              const wDays = dowList.map(dow => {
-                if (dow === 6) return week.sat || null;
-                if (dow === 0) return week.sun || null;
-                return week.days.find(d => new Date(year, selectedMonth - 1, d).getDay() === dow) || null;
-              });
+            {weeks.map((weekDays, wi) => {
+              const wDays = dowList.map(dow => weekDays.find(d => new Date(year, selectedMonth - 1, d).getDay() === dow) || null);
               const wRecs = wDays.map(d => d ? byDate[dateStr(d)] : null);
               const wHasTarde = wRecs.some(r => r?.['tarde']);
+              const weekNum = Math.ceil(weekDays[0] / 7);
 
               return (
                 <div key={wi}>
                   <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '8px 0 4px', fontWeight: 600 }}>
-                    Semana {wi + 1}
+                    Semana {weekNum}
                   </p>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
                     {wDays.map((d, i) => {

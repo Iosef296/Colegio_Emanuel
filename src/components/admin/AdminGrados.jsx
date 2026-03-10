@@ -209,62 +209,14 @@ export default function AdminGrados() {
           )}
 
           {!gradeGradesLoading && gradeStudents.map(s => {
-            const courseEntries = Object.entries(studentMap[s.id]?.courses || {});
-            const allScores = courseEntries.flatMap(([, c]) => c.evaluations.map(e => e.score));
-            const avg = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : null;
-            const paid = hasPaidCurrentMonth(s.id);
-            const expanded = !!expandedStudents[s.id];
-
             return (
               <div key={s.id} className="card" style={{ marginBottom: 10 }}>
-                {/* Row: avatar | nombre | pago | promedio + botón */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Icon name="user" color="#7C3AED" size={16} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700 }}>{s.first_name} {s.last_name}</p>
-                  </div>
-                  {/* Average + toggle */}
-                  {avg !== null && (
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>Prom.</p>
-                      <p style={{ fontSize: 15, fontWeight: 800, color: avg >= 11 ? 'var(--success)' : 'var(--danger)' }}>{avg.toFixed(1)}</p>
-                    </div>
-                  )}
-                  <button onClick={() => toggleStudent(s.id)}
-                    style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, border: 'none', background: 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
-                    {expanded ? '▲' : '▼'}
-                  </button>
+                  <p style={{ fontSize: 14, fontWeight: 700 }}>{s.first_name} {s.last_name}</p>
                 </div>
-
-                {/* Grades (collapsible) */}
-                {expanded && (
-                  <div style={{ marginTop: 12 }}>
-                    {courseEntries.length === 0 && (
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin notas registradas</p>
-                    )}
-                    {courseEntries.map(([courseName, { color, evaluations }]) => {
-                      const courseAvg = evaluations.reduce((a, e) => a + e.score, 0) / evaluations.length;
-                      return (
-                        <div key={courseName} style={{ marginBottom: 8 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color }}>{courseName}</span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: courseAvg >= 11 ? 'var(--success)' : 'var(--danger)' }}>{courseAvg.toFixed(1)}</span>
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                            {evaluations.map((ev, i) => (
-                              <div key={i} style={{ background: 'var(--bg)', borderRadius: 7, padding: '3px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 52 }}>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{ev.name}</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: ev.score >= 11 ? 'var(--success)' : 'var(--danger)' }}>{ev.score}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             );
           })}

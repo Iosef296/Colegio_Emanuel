@@ -132,6 +132,20 @@ pool._pool.query(`
 `).then(() => console.log('DB: turno migration OK'))
   .catch(err => console.error('DB turno migration error:', err.message));
 
+// Auto-delete communications and daily_progress older than 105 days (3.5 months)
+async function cleanupOldRecords() {
+  try {
+    const [c] = await pool.query(`DELETE FROM communications WHERE created_at < NOW() - INTERVAL '105 days'`);
+    const [d] = await pool.query(`DELETE FROM daily_progress WHERE created_at < NOW() - INTERVAL '105 days'`);
+    const cc = c.rowCount ?? 0, dc = d.rowCount ?? 0;
+    if (cc + dc > 0) console.log(`Cleanup: ${cc} comunicados, ${dc} avances eliminados`);
+  } catch (err) {
+    console.error('Cleanup error:', err.message);
+  }
+}
+cleanupOldRecords();
+setInterval(cleanupOldRecords, 24 * 60 * 60 * 1000); // daily
+
 const server = app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

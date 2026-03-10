@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function AdminAlumnos() {
   const [students, setStudents] = useState([]);
@@ -16,17 +17,20 @@ export default function AdminAlumnos() {
   const [qrStudent, setQrStudent] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
 
-  const load = () => {
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     Promise.all([
       api.get('/students'),
       api.get('/grade-levels'),
     ]).then(([s, gl]) => {
       setStudents(s);
       setGradeLevels(gl);
-    }).catch(console.error).finally(() => setLoading(false));
+      setLoading(false);
+    }).catch(console.error);
   };
 
   useEffect(load, []);
+  useAutoRefresh(() => load(true));
 
   useEffect(() => {
     if (qrStudent?.codigo) {

@@ -15,7 +15,7 @@ const NAV_ITEMS = {
   ],
   docente: [
     { to: '/docente', icon: 'home', label: 'Inicio', end: true },
-    { to: '/docente/cursos', icon: 'book', label: 'Mis Cursos' },
+    { to: '/docente/cursos', icon: 'book', label: 'Notas' },
     { to: '/docente/comunicados', icon: 'bell', label: 'Comunicados' },
     { to: '/docente/avances', icon: 'chart', label: 'Avances' },
   ],
@@ -23,6 +23,7 @@ const NAV_ITEMS = {
     { to: '/auxiliar', icon: 'home', label: 'Inicio', end: true },
     { to: '/auxiliar/asistencia', icon: 'calendar', label: 'Asistencia' },
     { to: '/auxiliar/comunicados', icon: 'bell', label: 'Comunicados' },
+    { to: '/auxiliar/informes', icon: 'eye', label: 'Informes' },
   ],
   admin: [
     { to: '/admin', icon: 'home', label: 'Inicio', end: true },
@@ -32,6 +33,7 @@ const NAV_ITEMS = {
     { to: '/admin/cursos', icon: 'book', label: 'Cursos' },
     { to: '/admin/pagos', icon: 'dollar', label: 'Pagos' },
     { to: '/admin/comunicados', icon: 'bell', label: 'Comunicados' },
+    { to: '/admin/informes', icon: 'eye', label: 'Informes' },
   ],
 };
 
@@ -44,20 +46,22 @@ const MOBILE_NAV = {
   ],
   docente: [
     { to: '/docente', icon: 'home', label: 'Inicio', end: true },
-    { to: '/docente/cursos', icon: 'book', label: 'Cursos' },
-    { to: '/docente/comunicados', icon: 'bell', label: 'Avisos' },
+    { to: '/docente/avances', icon: 'chart', label: 'Avances' },
+    { to: '/docente/cursos', icon: 'book', label: 'Notas' },
+    { to: '/docente/comunicados', icon: 'bell', label: 'Comunicados' },
   ],
   auxiliar: [
     { to: '/auxiliar', icon: 'home', label: 'Inicio', end: true },
     { to: '/auxiliar/asistencia', icon: 'calendar', label: 'Asistencia' },
     { to: '/auxiliar/comunicados', icon: 'bell', label: 'Avisos' },
+    { to: '/auxiliar/informes', icon: 'eye', label: 'Informes' },
   ],
   admin: [
     { to: '/admin', icon: 'home', label: 'Inicio', end: true },
-    { to: '/admin/usuarios', icon: 'users', label: 'Profesores' },
     { to: '/admin/alumnos', icon: 'user', label: 'Alumnos' },
     { to: '/admin/pagos', icon: 'dollar', label: 'Pagos' },
     { to: '/admin/comunicados', icon: 'bell', label: 'Avisos' },
+    { to: '/admin/informes', icon: 'eye', label: 'Informes' },
   ],
 };
 

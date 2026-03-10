@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function DocenteDashboard() {
   const { user } = useAuth();
@@ -13,9 +14,11 @@ export default function DocenteDashboard() {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
 
-  useEffect(() => {
-    api.get('/dashboard/docente').then(setData).catch(console.error).finally(() => setLoading(false));
+  const load = useCallback((silent = false) => {
+    api.get('/dashboard/docente').then(data => { setData(data); setLoading(false); }).catch(console.error);
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load(true));
 
   useEffect(() => {
     if (user?.username) {
@@ -63,7 +66,22 @@ export default function DocenteDashboard() {
       </div>
 
       <div className="content-area">
-        <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Mis Cursos</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Acciones Rápidas</h3>
+        <div className="grid-2">
+          {[
+            { icon: 'bell', label: 'Comunicados', to: '/docente/comunicados', color: '#EC4899', bg: '#FCE7F3' },
+            { icon: 'chart', label: 'Avances', to: '/docente/avances', color: '#14B8A6', bg: '#CCFBF1' },
+          ].map((item, i) => (
+            <div key={i} onClick={() => navigate(item.to)} className="card" style={{ cursor: 'pointer' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                <Icon name={item.icon} color={item.color} size={18} />
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 style={{ fontSize: 15, fontWeight: 700, margin: '20px 0 12px' }}>Notas</h3>
         <div className="grid-2">
           {(data?.courses || []).map(c => (
             <div key={c.id} className="card" style={{ cursor: 'pointer' }} onClick={() => navigate(`/docente/cursos/${c.id}`)}>
@@ -72,22 +90,6 @@ export default function DocenteDashboard() {
               </div>
               <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{c.name}</p>
               <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.grade_name} "{c.section}"</p>
-            </div>
-          ))}
-        </div>
-
-        <h3 style={{ fontSize: 15, fontWeight: 700, margin: '20px 0 12px' }}>Acciones Rápidas</h3>
-        <div className="grid-2">
-          {[
-            { icon: 'calendar', label: 'Registrar Asistencia', to: '/docente/asistencia', color: '#10B981', bg: '#D1FAE5' },
-            { icon: 'bell', label: 'Nuevo Comunicado', to: '/docente/comunicados/nuevo', color: '#EC4899', bg: '#FCE7F3' },
-            { icon: 'chart', label: 'Nuevo Avance', to: '/docente/avances/nuevo', color: '#14B8A6', bg: '#CCFBF1' },
-          ].map((item, i) => (
-            <div key={i} onClick={() => navigate(item.to)} className="card" style={{ cursor: 'pointer' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                <Icon name={item.icon} color={item.color} size={18} />
-              </div>
-              <p style={{ fontSize: 13, fontWeight: 600 }}>{item.label}</p>
             </div>
           ))}
         </div>

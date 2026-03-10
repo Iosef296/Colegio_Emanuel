@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function PadreNotas() {
   const [grades, setGrades] = useState([]);
@@ -8,15 +9,16 @@ export default function PadreNotas() {
   const [loading, setLoading] = useState(true);
   const [showPayModal, setShowPayModal] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/grades'),
-      api.get('/dashboard/padre'),
-    ]).then(([g, d]) => {
+  const load = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
+    Promise.all([api.get('/grades'), api.get('/dashboard/padre')]).then(([g, d]) => {
       setGrades(g);
-      setMesActualPagado(d?.stats?.mesActualPagado || false);
-    }).catch(console.error).finally(() => setLoading(false));
+      setMesActualPagado(d?.stats?.mesActualPagado ?? false);
+      setLoading(false);
+    }).catch(console.error);
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load(true));
 
   if (loading) return <div className="loading">Cargando...</div>;
 

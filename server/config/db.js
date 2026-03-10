@@ -4,10 +4,16 @@ dotenv.config();
 
 const { Pool } = pg;
 
+const baseConfig = {
+  max: 10,
+  idleTimeoutMillis: 30000,       // close idle connections after 30s (good for auto-stop)
+  connectionTimeoutMillis: 5000,  // fail fast if DB unreachable after cold start
+};
+
 const pgPool = new Pool(
   process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 10 }
-    : { host: process.env.DB_HOST || 'localhost', user: process.env.DB_USER || 'postgres', password: process.env.DB_PASS || '', database: process.env.DB_NAME || 'colegio_emanuel', port: parseInt(process.env.DB_PORT || '5432'), max: 10 }
+    ? { ...baseConfig, connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+    : { ...baseConfig, host: process.env.DB_HOST || 'localhost', user: process.env.DB_USER || 'postgres', password: process.env.DB_PASS || '', database: process.env.DB_NAME || 'colegio_emanuel', port: parseInt(process.env.DB_PORT || '5432') }
 );
 
 // Convert MySQL-style ? placeholders to PostgreSQL $1, $2, ...

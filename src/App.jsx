@@ -23,9 +23,11 @@ import DocenteComunicados from './components/docente/DocenteComunicados';
 import DocenteComunicadoForm from './components/docente/DocenteComunicadoForm';
 import DocenteAvances from './components/docente/DocenteAvances';
 import DocenteAvanceForm from './components/docente/DocenteAvanceForm';
+import DocenteAvanceEdit from './components/docente/DocenteAvanceEdit';
 
 // Auxiliar
 import AuxiliarDashboard from './components/auxiliar/AuxiliarDashboard';
+import AuxiliarAsistencia from './components/auxiliar/AuxiliarAsistencia';
 
 // Admin
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -36,6 +38,7 @@ import AdminAsignaciones from './components/admin/AdminAsignaciones';
 import AdminGrados from './components/admin/AdminGrados';
 import AdminPagos from './components/admin/AdminPagos';
 import AdminComunicados from './components/admin/AdminComunicados';
+import Informes from './components/admin/Informes';
 
 function RoleRedirect() {
   const { user } = useAuth();
@@ -68,12 +71,14 @@ export default function App() {
       <Route path="/docente/comunicados/nuevo" element={<ProtectedRoute roles={['docente']}><Layout><DocenteComunicadoForm /></Layout></ProtectedRoute>} />
       <Route path="/docente/avances" element={<ProtectedRoute roles={['docente']}><Layout><DocenteAvances /></Layout></ProtectedRoute>} />
       <Route path="/docente/avances/nuevo" element={<ProtectedRoute roles={['docente']}><Layout><DocenteAvanceForm /></Layout></ProtectedRoute>} />
+      <Route path="/docente/avances/:id/editar" element={<ProtectedRoute roles={['docente']}><Layout><DocenteAvanceEdit /></Layout></ProtectedRoute>} />
 
       {/* Auxiliar routes */}
       <Route path="/auxiliar" element={<ProtectedRoute roles={['auxiliar']}><Layout><AuxiliarDashboard /></Layout></ProtectedRoute>} />
-      <Route path="/auxiliar/asistencia" element={<ProtectedRoute roles={['auxiliar']}><Layout><DocenteAttendance /></Layout></ProtectedRoute>} />
+      <Route path="/auxiliar/asistencia" element={<ProtectedRoute roles={['auxiliar']}><Layout><AuxiliarAsistencia /></Layout></ProtectedRoute>} />
       <Route path="/auxiliar/comunicados" element={<ProtectedRoute roles={['auxiliar']}><Layout><DocenteComunicados /></Layout></ProtectedRoute>} />
       <Route path="/auxiliar/comunicados/nuevo" element={<ProtectedRoute roles={['auxiliar']}><Layout><DocenteComunicadoForm /></Layout></ProtectedRoute>} />
+      <Route path="/auxiliar/informes" element={<ProtectedRoute roles={['auxiliar']}><Layout><Informes /></Layout></ProtectedRoute>} />
 
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
@@ -84,6 +89,7 @@ export default function App() {
       <Route path="/admin/asignaciones" element={<ProtectedRoute roles={['admin']}><Layout><AdminAsignaciones /></Layout></ProtectedRoute>} />
       <Route path="/admin/pagos" element={<ProtectedRoute roles={['admin']}><Layout><AdminPagos /></Layout></ProtectedRoute>} />
       <Route path="/admin/comunicados" element={<ProtectedRoute roles={['admin']}><Layout><AdminComunicados /></Layout></ProtectedRoute>} />
+      <Route path="/admin/informes" element={<ProtectedRoute roles={['admin']}><Layout><Informes /></Layout></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<RoleRedirect />} />

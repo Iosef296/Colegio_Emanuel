@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function PadreCursos() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    api.get('/teacher-courses').then(setCourses).catch(console.error).finally(() => setLoading(false));
+  const load = useCallback((silent = false) => {
+    api.get('/teacher-courses').then(data => { setCourses(data); setLoading(false); }).catch(console.error);
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load(true));
 
   if (loading) return <div className="loading">Cargando...</div>;
 

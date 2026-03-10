@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
+import { broadcast } from '../utils/sse.js';
 
 const router = Router();
 router.use(authenticateToken);
@@ -42,6 +43,7 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
       'INSERT INTO payments (student_id, month, year, amount, paid, paid_date) VALUES (?,?,?,?,?,?) RETURNING id',
       [student_id, month, year, amount, paid || false, paid_date || null]
     );
+    broadcast();
     res.status(201).json({ id: result[0].id });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Pago ya existe' });
@@ -63,6 +65,7 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 
     values.push(req.params.id);
     await pool.query(`UPDATE payments SET ${fields.join(',')} WHERE id=?`, values);
+    broadcast();
     res.json({ message: 'Pago actualizado' });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });

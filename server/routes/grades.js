@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
+import { broadcast } from '../utils/sse.js';
 
 const router = Router();
 router.use(authenticateToken);
@@ -59,6 +60,7 @@ router.post('/', authorizeRoles('docente', 'admin'), async (req, res) => {
        VALUES (?,?,?,?) ON CONFLICT (student_id, teacher_course_id, evaluation_name) DO UPDATE SET score=EXCLUDED.score`,
       [student_id, teacher_course_id, evaluation_name, score]
     );
+    broadcast();
     res.status(201).json({ message: 'Nota guardada' });
   } catch (err) {
     console.error(err);
@@ -70,6 +72,7 @@ router.put('/:id', authorizeRoles('docente', 'admin'), async (req, res) => {
   try {
     const { score } = req.body;
     await pool.query('UPDATE grades SET score=? WHERE id=?', [score, req.params.id]);
+    broadcast();
     res.json({ message: 'Nota actualizada' });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });

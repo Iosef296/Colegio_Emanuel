@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function AdminGrados() {
   const [grades, setGrades] = useState([]);
@@ -19,14 +20,15 @@ export default function AdminGrados() {
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const load = () => {
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     Promise.all([api.get('/grade-levels'), api.get('/students')])
-      .then(([gl, s]) => { setGrades(gl); setStudents(s); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .then(([gl, s]) => { setGrades(gl); setStudents(s); setLoading(false); })
+      .catch(console.error);
   };
 
   useEffect(load, []);
+  useAutoRefresh(() => load(true));
 
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const currentMonth = MONTHS[new Date().getMonth()];

@@ -2,10 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import jsQR from 'jsqr';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function DocenteAttendance() {
   const [students, setStudents] = useState([]);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [records, setRecords] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,13 +37,15 @@ export default function DocenteAttendance() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
+  const load = useCallback((silent = false) => {
     api.get('/attendance').then(att => {
       const existing = {};
       att.forEach(a => { if (a.date === date) existing[a.student_id] = a.status; });
       setRecords(existing);
     }).catch(console.error);
   }, [date]);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load(true));
 
   const toggleStatus = (studentId) => {
     const statuses = ['temprano', 'tarde', 'falta', 'justificado'];

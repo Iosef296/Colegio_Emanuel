@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function AdminAsignaciones() {
   const [assignments, setAssignments] = useState([]);
@@ -13,7 +14,8 @@ export default function AdminAsignaciones() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  const load = () => {
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     Promise.all([
       api.get('/teacher-courses'),
       api.get('/users'),
@@ -24,10 +26,12 @@ export default function AdminAsignaciones() {
       setTeachers(u.filter(x => x.role === 'docente'));
       setCourses(c);
       setGradeLevels(gl);
-    }).catch(console.error).finally(() => setLoading(false));
+      setLoading(false);
+    }).catch(console.error);
   };
 
   useEffect(load, []);
+  useAutoRefresh(() => load(true));
 
   const handleSubmit = async (e) => {
     e.preventDefault();

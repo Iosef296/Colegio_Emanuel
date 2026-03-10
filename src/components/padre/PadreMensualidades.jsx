@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
 import { jsPDF } from 'jspdf';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 function downloadReceipt(payment) {
   const doc = new jsPDF({ unit: 'mm', format: 'a5' });
@@ -60,9 +61,11 @@ export default function PadreMensualidades() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.get('/payments').then(setPayments).catch(console.error).finally(() => setLoading(false));
+  const load = useCallback((silent = false) => {
+    api.get('/payments').then(data => { setPayments(data); setLoading(false); }).catch(console.error);
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load(true));
 
   if (loading) return <div className="loading">Cargando...</div>;
 

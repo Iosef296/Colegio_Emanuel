@@ -8,25 +8,33 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [loading, setLoading] = useState(true);
+  // loading is always false — user is trusted from localStorage immediately.
+  // If token is expired, API calls will return 401 and client.js handles the redirect.
+  const loading = false;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token && user) {
+      // Background refresh — update user data without blocking rendering
       api.get('/auth/me')
         .then(data => {
           setUser(data);
           localStorage.setItem('user', JSON.stringify(data));
         })
         .catch(() => {
-          setUser(null);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+          // api client already handles 401 (clears token + redirects to /login)
+          // Don't clear on network/server errors — that would log out on bad wifi
+        });
     }
+
+    // Sync auth state across tabs via storage events
+    const handleStorage = (e) => {
+      if (e.key === 'user') {
+        setUser(e.newValue ? JSON.parse(e.newValue) : null);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   const login = async (username, password) => {

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function PadreDashboard() {
   const { user } = useAuth();
@@ -14,9 +15,11 @@ export default function PadreDashboard() {
   const [showQr, setShowQr] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
 
-  useEffect(() => {
-    api.get('/dashboard/padre').then(setData).catch(console.error).finally(() => setLoading(false));
+  const load = useCallback((silent = false) => {
+    api.get('/dashboard/padre').then(data => { setData(data); setLoading(false); }).catch(console.error);
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load(true));
 
   useEffect(() => {
     const codigo = data?.student?.codigo;

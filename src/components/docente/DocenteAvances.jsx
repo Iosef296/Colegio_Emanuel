@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
+import AvancesLista from '../common/AvancesLista';
 
 export default function DocenteAvances() {
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    api.get('/daily-progress').then(setProgress).catch(console.error).finally(() => setLoading(false));
+  const load = useCallback(() => {
+    api.get('/daily-progress').then(data => { setProgress(data); setLoading(false); }).catch(console.error);
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useAutoRefresh(() => load());
 
   if (loading) return <div className="loading">Cargando...</div>;
-
-  const formatDate = (d) => new Date(d).toLocaleDateString('es-PE');
 
   return (
     <div>
@@ -29,17 +31,7 @@ export default function DocenteAvances() {
         </div>
       </div>
       <div className="content-area">
-        {progress.length === 0 ? (
-          <div className="empty-state"><p>No hay avances registrados</p></div>
-        ) : progress.map((a, i) => (
-          <div key={i} className="card" style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 4 }}>
-              <span className="badge badge-primary">{a.course_name}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(a.date)}</span>
-            </div>
-            <p style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>{a.content}</p>
-          </div>
-        ))}
+        <AvancesLista avances={progress} onEdit={id => navigate(`/docente/avances/${id}/editar`)} />
       </div>
     </div>
   );

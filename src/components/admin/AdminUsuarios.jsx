@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function AdminUsuarios() {
   const [users, setUsers] = useState([]);
@@ -23,7 +24,8 @@ export default function AdminUsuarios() {
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignMessage, setAssignMessage] = useState('');
 
-  const load = () => {
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     Promise.all([
       api.get('/users'),
       api.get('/teacher-courses'),
@@ -34,10 +36,12 @@ export default function AdminUsuarios() {
       setAssignments(a);
       setCourses(c);
       setGradeLevels(gl);
-    }).catch(console.error).finally(() => setLoading(false));
+      setLoading(false);
+    }).catch(console.error);
   };
 
   useEffect(load, []);
+  useAutoRefresh(() => load(true));
 
   useEffect(() => {
     if (credentials?.username) {

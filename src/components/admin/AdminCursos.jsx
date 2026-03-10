@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function AdminCursos() {
   const [courses, setCourses] = useState([]);
@@ -17,11 +18,13 @@ export default function AdminCursos() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  const load = () => {
-    api.get('/courses').then(setCourses).catch(console.error).finally(() => setLoading(false));
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
+    api.get('/courses').then(data => { setCourses(data); setLoading(false); }).catch(console.error);
   };
 
   useEffect(load, []);
+  useAutoRefresh(() => load(true));
 
   const handleSelectCourse = (c) => {
     setSelectedCourse(c);

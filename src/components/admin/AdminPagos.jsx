@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export default function AdminPagos() {
   const [payments, setPayments] = useState([]);
@@ -14,14 +15,15 @@ export default function AdminPagos() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  const load = () => {
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     Promise.all([api.get('/payments'), api.get('/students')])
-      .then(([p, s]) => { setPayments(p); setStudents(s); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .then(([p, s]) => { setPayments(p); setStudents(s); setLoading(false); })
+      .catch(console.error);
   };
 
   useEffect(load, []);
+  useAutoRefresh(() => load(true));
 
   const handleTogglePaid = async (p) => {
     setTogglingId(p.id);

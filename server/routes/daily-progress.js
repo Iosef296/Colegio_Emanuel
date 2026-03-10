@@ -9,12 +9,13 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
   try {
     let query = `SELECT dp.id, dp.date, dp.title, dp.content, dp.photo_url, dp.attachments, dp.created_at,
-      c.name as course_name, c.color, u.full_name as teacher_name,
-      dp.teacher_course_id, tc.grade_level_id
+      c.name as course_name, c.color, c.id as course_id, u.full_name as teacher_name,
+      dp.teacher_course_id, tc.grade_level_id, gl.name as grade_name, gl.section
       FROM daily_progress dp
       JOIN teacher_courses tc ON dp.teacher_course_id = tc.id
       JOIN courses c ON tc.course_id = c.id
       JOIN users u ON tc.teacher_id = u.id
+      LEFT JOIN grade_levels gl ON tc.grade_level_id = gl.id
       WHERE 1=1`;
     const params = [];
 

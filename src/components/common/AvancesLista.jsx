@@ -19,9 +19,14 @@ function getWeekMonday(dateStr) {
 }
 
 function weekNumInMonth(year, month, weekMondayStr) {
-  const firstMonday = getWeekMonday(`${year}-${String(month).padStart(2,'0')}-01`);
   const weekMonday = new Date(weekMondayStr + 'T12:00:00');
-  return Math.round((weekMonday - firstMonday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekMonday);
+    d.setDate(weekMonday.getDate() + i);
+    if (d.getFullYear() === year && d.getMonth() + 1 === month)
+      return Math.ceil(d.getDate() / 7);
+  }
+  return 1;
 }
 
 function dayLabel(dateStr) {

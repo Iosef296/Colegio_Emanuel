@@ -80,11 +80,11 @@ export default function AvancesLista({ avances, onEdit, hideCourseLabel = false 
   const toggle = (setter, key) => setter(p => ({ ...p, [key]: p[key] !== false ? false : true }));
 
   return (
-    <div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, alignItems: 'start' }}>
       {grouped.map((monthData) => {
         const monthCollapsed = collapsedMonths[monthData.key] !== false;
         return (
-          <div key={monthData.key} style={{ marginBottom: 16 }}>
+          <div key={monthData.key}>
             {/* Month header */}
             <div onClick={() => toggle(setCollapsedMonths, monthData.key)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'linear-gradient(135deg, var(--nav-bg), #2563EB)', borderRadius: 8, marginBottom: monthCollapsed ? 0 : 10, cursor: 'pointer', userSelect: 'none' }}>

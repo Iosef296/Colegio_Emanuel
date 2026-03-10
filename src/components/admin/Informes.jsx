@@ -162,11 +162,11 @@ function StudentDetail({ student }) {
   const [attendance, setAttendance] = useState(null);
   const [grades, setGrades] = useState(null);
   const [comms, setComms] = useState(null);
-  const [open, setOpen] = useState({ asistencia: true, notas: false, comunicados: false });
+  const [open, setOpen] = useState({ asistencia: false, notas: false, comunicados: false });
 
   useEffect(() => {
     setAttendance(null); setGrades(null); setComms(null);
-    setOpen({ asistencia: true, notas: false, comunicados: false });
+    setOpen({ asistencia: false, notas: false, comunicados: false });
     setOpenCourses({});
     api.get(`/attendance?student_id=${student.id}`).then(setAttendance).catch(console.error);
     api.get(`/grades?student_id=${student.id}`).then(setGrades).catch(console.error);

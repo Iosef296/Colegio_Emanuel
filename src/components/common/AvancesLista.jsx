@@ -57,13 +57,12 @@ function groupAvances(avances) {
             key: weekKey,
             weekNum: idx + 1,
             days: Object.entries(week.days)
-              .sort(([a], [b]) => b.localeCompare(a))
+              .sort(([a], [b]) => a.localeCompare(b))
               .map(([dateKey, courses]) => ({
                 date: dateKey,
                 courses: Object.entries(courses).map(([name, { color, items }]) => ({ name, color, items })),
               })),
           }))
-          .reverse(), // most recent week first
       };
     });
 }

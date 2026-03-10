@@ -244,7 +244,6 @@ export default function AdminPagos() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                {pending > 0 && <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--danger)' }}>S/ {pending.toFixed(0)}</p>}
                 <Icon name="back" color="var(--text-muted)" size={18} style={{ transform: 'rotate(180deg)' }} />
               </div>
             </div>

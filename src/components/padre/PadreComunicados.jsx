@@ -34,18 +34,23 @@ function CommCard({ c, onClick }) {
   );
 }
 
-function AttCard({ a }) {
+function AttCard({ a, hasSalida }) {
   const c = statusColor[a.status] || '#64748B';
   const label = statusLabel[a.status] || a.status;
-  const turnoLabel = a.turno === 'tarde' ? 'Tarde' : 'Mañana';
-  const tipoLabel = a.tipo === 'salida' ? '· Salida' : '';
+  const turnoLabel = `Turno: ${a.turno === 'tarde' ? 'Tarde' : 'Mañana'}`;
+  const timeStr = a.updated_at
+    ? new Date(a.updated_at).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false })
+    : '';
   return (
     <div className="card" style={{ marginBottom: 8, borderLeft: `3px solid ${c}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{formatDateShort(a.date)}</p>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{turnoLabel}{tipoLabel}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{turnoLabel}{timeStr ? ` · ${timeStr}` : ''}</p>
           {a.first_name && <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{a.first_name} {a.last_name}</p>}
+          <p style={{ fontSize: 11, marginTop: 3, fontWeight: 600, color: hasSalida ? '#16A34A' : '#D97706' }}>
+            {hasSalida ? 'Ya salio' : 'Aun en el colegio'}
+          </p>
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: c, background: c + '18', borderRadius: 10, padding: '3px 10px' }}>{label}</span>
       </div>
@@ -127,6 +132,11 @@ export default function PadreComunicados() {
   const direccionComms = comms.filter(c => c.type === 'general' || c.type === 'grado');
   const cursoComms = comms.filter(c =>
     (c.type === 'curso' || c.type === 'alumno') && new Date(c.created_at) >= thirtyDaysAgo
+  );
+  const salidaKeys = new Set(
+    attendance
+      .filter(a => a.tipo === 'salida' && a.status === 'salida' && toDateStr(a.date) >= sevenDaysAgoStr)
+      .map(a => `${a.student_id}-${toDateStr(a.date)}-${a.turno}`)
   );
   const recentAttendance = attendance
     .filter(a => toDateStr(a.date) >= sevenDaysAgoStr && a.tipo !== 'salida')
@@ -231,7 +241,7 @@ export default function PadreComunicados() {
                       onToggle={() => setOpenSections(s => ({ ...s, asistencia: !s.asistencia }))}
                     />
                     {openSections.asistencia && recentAttendance.map(a => (
-                      <AttCard key={`${a.student_id}-${toDateStr(a.date)}-${a.turno}`} a={a} />
+                      <AttCard key={`${a.student_id}-${toDateStr(a.date)}-${a.turno}`} a={a} hasSalida={salidaKeys.has(`${a.student_id}-${toDateStr(a.date)}-${a.turno}`)} />
                     ))}
                   </div>
                 )}

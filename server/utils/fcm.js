@@ -85,7 +85,7 @@ export async function sendToTokens(tokens, { title, body }, data = {}) {
             android: {
               priority: 'high',
               notification: {
-                channel_id: 'colegio-emanuel',
+                channel_id: 'default',
                 priority: 'high',
                 default_vibrate_timings: true,
                 sound: 'default',

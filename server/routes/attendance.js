@@ -18,8 +18,11 @@ function peruTime() {
   return new Date().toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function buildNotification(name, status) {
+function buildNotification(name, status, tipo) {
   const hora = peruTime();
+  if (tipo === 'salida') {
+    return { title: 'SALIDA REGISTRADA', body: `${name} salió a las ${hora}` };
+  }
   const body = status === 'temprano'
     ? `${name} llegó a las ${hora}`
     : status === 'tarde'
@@ -31,7 +34,7 @@ function buildNotification(name, status) {
 router.get('/', async (req, res) => {
   try {
     const { student_id, month, year, date, turno } = req.query;
-    let query = `SELECT a.id, a.student_id, a.date, a.status, a.turno,
+    let query = `SELECT a.id, a.student_id, a.date, a.status, a.turno, COALESCE(a.tipo,'entrada') as tipo,
       s.first_name, s.last_name
       FROM attendance a
       JOIN students s ON a.student_id = s.id
@@ -65,17 +68,18 @@ router.get('/', async (req, res) => {
 
 router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res) => {
   try {
-    const { student_id, date, status, turno = 'mañana' } = req.body;
+    const { student_id, date, status, turno = 'mañana', tipo = 'entrada' } = req.body;
     await pool.query(
-      `INSERT INTO attendance (student_id, date, status, turno)
-       VALUES (?,?,?,?) ON CONFLICT (student_id, date, turno) DO UPDATE SET status=EXCLUDED.status`,
-      [student_id, date, status, turno]
+      `INSERT INTO attendance (student_id, date, status, turno, tipo)
+       VALUES (?,?,?,?,?) ON CONFLICT (student_id, date, turno, tipo) DO UPDATE SET status=EXCLUDED.status`,
+      [student_id, date, status, turno, tipo]
     );
     broadcast();
     res.status(201).json({ message: 'Asistencia registrada' });
     const notifData = { type: 'attendance', student_id: String(student_id) };
+    if (status === 'falta' && tipo === 'salida') return;
     getStudentName(student_id).then(name => {
-      const notification = buildNotification(name, status);
+      const notification = buildNotification(name, status, tipo);
       if (process.env.FIREBASE_SERVICE_ACCOUNT) {
         getParentIdsForStudent(student_id)
           .then(ids => getTokensForUsers(ids))
@@ -102,13 +106,13 @@ router.post('/bulk', authorizeRoles('docente', 'admin', 'auxiliar'), async (req,
 
     const params = [];
     const valueClauses = records.map((r, i) => {
-      const offset = i * 4;
-      params.push(r.student_id, r.date, r.status, r.turno || 'mañana');
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
+      const offset = i * 5;
+      params.push(r.student_id, r.date, r.status, r.turno || 'mañana', r.tipo || 'entrada');
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
     });
     await pool._pool.query(
-      `INSERT INTO attendance (student_id, date, status, turno)
-       VALUES ${valueClauses.join(', ')} ON CONFLICT (student_id, date, turno) DO UPDATE SET status=EXCLUDED.status`,
+      `INSERT INTO attendance (student_id, date, status, turno, tipo)
+       VALUES ${valueClauses.join(', ')} ON CONFLICT (student_id, date, turno, tipo) DO UPDATE SET status=EXCLUDED.status`,
       params
     );
     broadcast();

@@ -12,6 +12,14 @@ export function usePushNotifications(user) {
       try {
         if (IS_CAPACITOR) {
           const { PushNotifications } = await import('@capacitor/push-notifications');
+          await PushNotifications.createChannel({
+            id: 'colegio-emanuel',
+            name: 'Colegio Emanuel',
+            importance: 5,
+            visibility: 1,
+            vibration: true,
+            sound: 'default',
+          });
           const perm = await PushNotifications.requestPermissions();
           if (perm.receive !== 'granted') return;
           await PushNotifications.register();

@@ -82,6 +82,15 @@ export async function sendToTokens(tokens, { title, body }, data = {}) {
           message: {
             token,
             notification: { title, body },
+            android: {
+              priority: 'high',
+              notification: {
+                channel_id: 'colegio-emanuel',
+                priority: 'high',
+                default_vibrate_timings: true,
+                sound: 'default',
+              },
+            },
             data: Object.fromEntries(
               Object.entries(data).map(([k, v]) => [k, String(v)])
             ),

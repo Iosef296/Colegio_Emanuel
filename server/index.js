@@ -20,6 +20,7 @@ import gradeLevelRoutes from './routes/grade-levels.js';
 import eventsRoutes from './routes/events.js';
 import uploadRoutes from './routes/upload.js';
 import pushTokenRoutes from './routes/push-tokens.js';
+import settingsRoutes from './routes/settings.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,6 +49,7 @@ app.use('/api/grade-levels', gradeLevelRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/push-tokens', pushTokenRoutes);
+app.use('/api/settings', settingsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -56,6 +58,10 @@ pool.query('ALTER TABLE students ADD COLUMN IF NOT EXISTS codigo VARCHAR(20) UNI
   .catch(err => console.error('DB migration error:', err.message));
 
 pool.query("ALTER TYPE communication_type ADD VALUE IF NOT EXISTS 'tarea'")
+  .catch(() => {});
+
+pool.query("ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'salida'")
+  .then(() => console.log('DB: attendance_status salida OK'))
   .catch(() => {});
 
 pool.query("ALTER TYPE communication_type ADD VALUE IF NOT EXISTS 'alumno'")
@@ -78,6 +84,13 @@ pool.query(`
 `).then(() => console.log('DB: push_tokens OK')).catch(err => console.error(err.message));
 pool.query(`CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id)`).catch(() => {});
 pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS p256dh TEXT`).catch(() => {});
+pool.query(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).then(() => console.log('DB: settings OK')).catch(err => console.error(err.message));
 pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS auth_key TEXT`).catch(() => {});
 
 pool.query('ALTER TABLE students ADD COLUMN IF NOT EXISTS photo_url TEXT')
@@ -141,15 +154,22 @@ pool._pool.query(`
     ) THEN
       ALTER TABLE attendance ADD COLUMN turno VARCHAR(20) NOT NULL DEFAULT 'mañana';
     END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name='attendance' AND column_name='tipo'
+    ) THEN
+      ALTER TABLE attendance ADD COLUMN tipo VARCHAR(10) NOT NULL DEFAULT 'entrada';
+    END IF;
     ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_student_id_date_key;
+    ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_student_id_date_turno_key;
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.table_constraints
-      WHERE constraint_name='attendance_student_id_date_turno_key' AND table_name='attendance'
+      WHERE constraint_name='attendance_student_id_date_turno_tipo_key' AND table_name='attendance'
     ) THEN
-      ALTER TABLE attendance ADD CONSTRAINT attendance_student_id_date_turno_key UNIQUE (student_id, date, turno);
+      ALTER TABLE attendance ADD CONSTRAINT attendance_student_id_date_turno_tipo_key UNIQUE (student_id, date, turno, tipo);
     END IF;
   END $$
-`).then(() => console.log('DB: turno migration OK'))
+`).then(() => console.log('DB: turno+tipo migration OK'))
   .catch(err => console.error('DB turno migration error:', err.message));
 
 // Auto-delete communications and daily_progress older than 105 days (3.5 months)

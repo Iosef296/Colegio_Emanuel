@@ -30,12 +30,16 @@ self.addEventListener('push', event => {
       self.registration.showNotification(data.title || 'Colegio Emanuel', {
         body: data.body || '',
         icon: '/LOGO EMANUEL.png',
+        badge: '/LOGO EMANUEL.png',
+        vibrate: [200, 100, 200],
+        renotify: true,
+        tag: 'attendance',
         data: data.data || {},
       })
     );
   } catch {
     event.waitUntil(
-      self.registration.showNotification('Colegio Emanuel', { body: 'Nueva notificación' })
+      self.registration.showNotification('Colegio Emanuel', { body: 'Nueva notificación', vibrate: [200, 100, 200] })
     );
   }
 });

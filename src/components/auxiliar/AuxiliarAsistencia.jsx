@@ -7,10 +7,18 @@ const statusInfo = {
   temprano: { label: 'Temprano', color: 'var(--success)', bg: '#D1FAE5' },
   tarde:    { label: 'Tarde',    color: 'var(--warning)', bg: '#FEF3C7' },
   falta:    { label: 'Falta',   color: 'var(--danger)',  bg: '#FEE2E2' },
+  salida:   { label: 'Salió',   color: 'var(--primary)', bg: '#DBEAFE' },
 };
 
 function makeLocalDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function to12h(time24) {
+  const [h, m] = time24.split(':').map(Number);
+  const period = h < 12 ? 'a.m.' : 'p.m.';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 function formatDateLabel(dateStr) {
@@ -31,22 +39,23 @@ export default function AuxiliarAsistencia() {
   const [newDateInput, setNewDateInput] = useState('');
   const [showAddDate, setShowAddDate] = useState(false);
 
-  // Turno
-  const [activeTurno, setActiveTurno] = useState(() => new Date().getHours() < 12 ? 'mañana' : 'tarde');
+  // Turno — auto-detectado, no editable
+  const activeTurno = new Date().getHours() < 12 ? 'mañana' : 'tarde';
 
-  // records keyed as `${date}__${turno}` → { [student_id]: status }
+  // Tipo: entrada o salida
+  const [activeTipo, setActiveTipo] = useState('entrada');
+
+  // records keyed as `${date}__${turno}__${tipo}` → { [student_id]: status }
   const [records, setRecords] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [scanMsg, setScanMsg] = useState('');
 
-  const [tempranoHasta, setTempranoHasta] = useState(
-    () => localStorage.getItem('att_temprano') || '07:30'
-  );
-  const [tardeHasta, setTardeHasta] = useState(
-    () => localStorage.getItem('att_tarde') || '08:00'
-  );
+  const defaultTemprano = activeTurno === 'mañana' ? '07:30' : '13:00';
+  const defaultTarde    = activeTurno === 'mañana' ? '08:00' : '13:30';
+  const [tempranoHasta, setTempranoHasta] = useState(defaultTemprano);
+  const [tardeHasta, setTardeHasta] = useState(defaultTarde);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -59,10 +68,19 @@ export default function AuxiliarAsistencia() {
   const tempranoRef = useRef(tempranoHasta);
   const activeDateRef = useRef(activeDate);
   const activeTurnoRef = useRef(activeTurno);
+  const activeTipoRef = useRef(activeTipo);
 
   useEffect(() => { tempranoRef.current = tempranoHasta; }, [tempranoHasta]);
   useEffect(() => { activeDateRef.current = activeDate; }, [activeDate]);
   useEffect(() => { activeTurnoRef.current = activeTurno; }, [activeTurno]);
+  useEffect(() => { activeTipoRef.current = activeTipo; }, [activeTipo]);
+
+  useEffect(() => {
+    api.get('/settings').then(s => {
+      if (s[`att_temprano_${activeTurno}`]) setTempranoHasta(s[`att_temprano_${activeTurno}`]);
+      if (s[`att_tarde_${activeTurno}`]) setTardeHasta(s[`att_tarde_${activeTurno}`]);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     Promise.all([api.get('/grade-levels'), api.get('/students'), api.get('/attendance')])
@@ -73,8 +91,9 @@ export default function AuxiliarAsistencia() {
         const existing = {};
         att.forEach(a => {
           const turno = a.turno || 'mañana';
+          const tipo = a.tipo || 'entrada';
           const dateStr = (typeof a.date === 'string' ? a.date : a.date.toISOString()).slice(0, 10);
-          const key = `${dateStr}__${turno}`;
+          const key = `${dateStr}__${turno}__${tipo}`;
           if (!existing[key]) existing[key] = {};
           existing[key][a.student_id] = a.status;
         });
@@ -85,11 +104,11 @@ export default function AuxiliarAsistencia() {
   }, []);
 
 
-  const recordKey = `${activeDate}__${activeTurno}`;
+  const recordKey = `${activeDate}__${activeTurno}__${activeTipo}`;
   const dayRecords = records[recordKey] || {};
 
   const toggleStatus = (studentId) => {
-    const statuses = ['temprano', 'tarde', 'falta'];
+    const statuses = activeTipo === 'entrada' ? ['temprano', 'tarde', 'falta'] : ['salida', 'falta'];
     const current = dayRecords[studentId] ?? 'falta';
     const next = statuses[(statuses.indexOf(current) + 1) % statuses.length];
     const key = recordKey;
@@ -97,10 +116,9 @@ export default function AuxiliarAsistencia() {
       ...prev,
       [key]: { ...(prev[key] || {}), [studentId]: next },
     }));
-    api.post('/attendance', { student_id: studentId, date: activeDate, turno: activeTurno, status: next })
+    api.post('/attendance', { student_id: studentId, date: activeDate, turno: activeTurno, tipo: activeTipo, status: next })
       .catch(err => {
         console.error(err);
-        // Revert on failure
         setRecords(prev => ({
           ...prev,
           [key]: { ...(prev[key] || {}), [studentId]: current },
@@ -115,8 +133,8 @@ export default function AuxiliarAsistencia() {
     scannedRef.current.add(rawValue);
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const status = currentTime <= tempranoRef.current ? 'temprano' : 'tarde';
-    const key = `${activeDateRef.current}__${activeTurnoRef.current}`;
+    const status = activeTipoRef.current === 'salida' ? 'salida' : (currentTime <= tempranoRef.current ? 'temprano' : 'tarde');
+    const key = `${activeDateRef.current}__${activeTurnoRef.current}__${activeTipoRef.current}`;
     setRecords(prev => ({
       ...prev,
       [key]: { ...(prev[key] || {}), [student.id]: status },
@@ -125,6 +143,7 @@ export default function AuxiliarAsistencia() {
       student_id: student.id,
       date: activeDateRef.current,
       turno: activeTurnoRef.current,
+      tipo: activeTipoRef.current,
       status,
     }).catch(console.error);
     setScanMsg(`✓ ${student.first_name} ${student.last_name} — ${statusInfo[status].label}`);
@@ -293,20 +312,20 @@ export default function AuxiliarAsistencia() {
           </div>
         </div>
 
-        {/* Turno tabs */}
+        {/* Tipo tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {['mañana', 'tarde'].map(t => (
+          {[['entrada', 'Entrada'], ['salida', 'Salida']].map(([val, label]) => (
             <button
-              key={t}
-              onClick={() => setActiveTurno(t)}
+              key={val}
+              onClick={() => setActiveTipo(val)}
               style={{
                 flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                fontSize: 13, fontWeight: 700, transition: 'all 0.15s', textTransform: 'capitalize',
-                background: activeTurno === t ? 'var(--primary)' : 'var(--bg)',
-                color: activeTurno === t ? 'white' : 'var(--text-secondary)',
+                fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
+                background: activeTipo === val ? 'var(--primary)' : 'var(--bg)',
+                color: activeTipo === val ? 'white' : 'var(--text-secondary)',
               }}
             >
-              Turno {t}
+              {label}
             </button>
           ))}
         </div>
@@ -315,21 +334,21 @@ export default function AuxiliarAsistencia() {
         <div className="card" style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <label className="form-label">Temprano hasta</label>
+              <label className="form-label">Temprano hasta ({to12h(tempranoHasta)})</label>
               <input
                 type="time"
                 className="form-input"
                 value={tempranoHasta}
-                onChange={e => { setTempranoHasta(e.target.value); localStorage.setItem('att_temprano', e.target.value); }}
+                onChange={e => { setTempranoHasta(e.target.value); api.put('/settings', { [`att_temprano_${activeTurno}`]: e.target.value }).catch(() => {}); }}
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label className="form-label">Tarde hasta</label>
+              <label className="form-label">Tarde hasta ({to12h(tardeHasta)})</label>
               <input
                 type="time"
                 className="form-input"
                 value={tardeHasta}
-                onChange={e => { setTardeHasta(e.target.value); localStorage.setItem('att_tarde', e.target.value); }}
+                onChange={e => { setTardeHasta(e.target.value); api.put('/settings', { [`att_tarde_${activeTurno}`]: e.target.value }).catch(() => {}); }}
               />
             </div>
           </div>
@@ -355,12 +374,16 @@ export default function AuxiliarAsistencia() {
 
         {/* Counters */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {[
+          {(activeTipo === 'entrada' ? [
             { val: gradeStudents.filter(s => dayRecords[s.id] === 'temprano').length, label: 'Temprano', color: 'var(--success)', bg: '#D1FAE5' },
             { val: gradeStudents.filter(s => dayRecords[s.id] === 'tarde').length, label: 'Tardanzas', color: 'var(--warning)', bg: '#FEF3C7' },
             { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Faltas', color: 'var(--danger)', bg: '#FEE2E2' },
             { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
-          ].map((item, i) => (
+          ] : [
+            { val: gradeStudents.filter(s => dayRecords[s.id] === 'salida').length, label: 'Salieron', color: 'var(--primary)', bg: '#DBEAFE' },
+            { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
+            { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+          ]).map((item, i) => (
             <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
               <p style={{ fontSize: 22, fontWeight: 800, color: item.color }}>{item.val}</p>
               <p style={{ fontSize: 10, color: item.color, fontWeight: 600 }}>{item.label}</p>
@@ -377,7 +400,9 @@ export default function AuxiliarAsistencia() {
         ) : (
           gradeStudents.map(s => {
             const status = dayRecords[s.id] ?? 'falta';
-            const info = statusInfo[status];
+            const info = (activeTipo === 'salida' && status === 'falta')
+              ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+              : statusInfo[status];
             return (
               <div key={s.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
@@ -403,7 +428,7 @@ export default function AuxiliarAsistencia() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <p style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>Escanear QR del alumno</p>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-            {activeDate === today ? 'Hoy' : formatDateLabel(activeDate)} · Turno {activeTurno} · Temprano hasta {tempranoHasta}
+            {activeDate === today ? 'Hoy' : formatDateLabel(activeDate)} · {activeTipo === 'entrada' ? `Entrada · Temprano hasta ${to12h(tempranoHasta)}` : 'Salida'}
           </p>
           <div style={{ position: 'relative', width: 280, height: 280, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--primary)' }}>
             <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} playsInline muted />

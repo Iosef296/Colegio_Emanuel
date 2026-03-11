@@ -25,6 +25,7 @@ router.post('/', async (req, res) => {
          ON CONFLICT (user_id, token) DO UPDATE SET updated_at=NOW()`,
         [req.user.id, token, platform]
       );
+      console.log(`[push-tokens] saved ${platform} token for user ${req.user.id}`);
     } else {
       return res.status(400).json({ error: 'Suscripción requerida' });
     }

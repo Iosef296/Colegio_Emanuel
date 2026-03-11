@@ -64,6 +64,7 @@ export async function getTokensForUsers(userIds) {
 }
 
 export async function sendToTokens(tokens, { title, body }, data = {}) {
+  console.log(`[FCM] sendToTokens: ${tokens.length} tokens, title="${title}"`);
   if (!tokens.length) return;
   const sa = getServiceAccount();
   const accessToken = await getAccessToken();

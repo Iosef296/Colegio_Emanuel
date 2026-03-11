@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { api } from '../api/client';
 
-const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true;
 const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 export function usePushNotifications(user) {
@@ -9,8 +8,10 @@ export function usePushNotifications(user) {
     if (!user || user.role !== 'padre') return;
 
     async function register() {
+      // Check inside the effect so Capacitor bridge is guaranteed to be ready
+      const isCapacitor = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true;
       try {
-        if (IS_CAPACITOR) {
+        if (isCapacitor) {
           const { PushNotifications } = await import('@capacitor/push-notifications');
           await PushNotifications.createChannel({
             id: 'default',

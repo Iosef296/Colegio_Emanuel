@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react';
 
 const SSE_URL = 'https://colegio-emanuel-api.fly.dev/api/events';
-const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true;
 
 export function useAutoRefresh(fn) {
   const fnRef = useRef(fn);
   useEffect(() => { fnRef.current = fn; });
 
   useEffect(() => {
+    // Check inside the effect so Capacitor bridge is guaranteed to be ready
+    const isCapacitor = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true;
+
     let debounce;
     const tick = () => {
       clearTimeout(debounce);
@@ -46,7 +48,7 @@ export function useAutoRefresh(fn) {
 
     // Capacitor: listen for app coming to foreground — more reliable than visibilitychange on Android
     let removeAppListener;
-    if (IS_CAPACITOR) {
+    if (isCapacitor) {
       import('@capacitor/app').then(({ App }) => {
         App.addListener('appStateChange', ({ isActive }) => {
           if (!isActive) return;

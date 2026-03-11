@@ -4,8 +4,9 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import AvanceAdjuntos from '../common/AvanceAdjuntos';
 
 const formatDate = (d) => new Date(d).toLocaleDateString('es-PE');
+const toDateStr = (d) => (typeof d === 'string' ? d : d.toISOString()).slice(0, 10);
 const formatDateShort = (d) =>
-  new Date(d + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
+  new Date(toDateStr(d) + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
 
 const statusColor = { temprano: '#16A34A', tarde: '#D97706', falta: '#DC2626', justificado: '#2563EB' };
 const statusLabel = { temprano: 'Temprano', tarde: 'Tardanza', falta: 'Falta', justificado: 'Justificado' };
@@ -128,15 +129,8 @@ export default function PadreComunicados() {
     (c.type === 'curso' || c.type === 'alumno') && new Date(c.created_at) >= thirtyDaysAgo
   );
   const recentAttendance = attendance
-    .filter(a => {
-      const d = typeof a.date === 'string' ? a.date : a.date.toISOString().slice(0, 10);
-      return d >= sevenDaysAgoStr && a.tipo !== 'salida';
-    })
-    .sort((a, b) => {
-      const da = typeof a.date === 'string' ? a.date : a.date.toISOString().slice(0, 10);
-      const db = typeof b.date === 'string' ? b.date : b.date.toISOString().slice(0, 10);
-      return db.localeCompare(da);
-    });
+    .filter(a => toDateStr(a.date) >= sevenDaysAgoStr && a.tipo !== 'salida')
+    .sort((a, b) => toDateStr(b.date).localeCompare(toDateStr(a.date)));
 
   const byCourse = {};
   cursoComms.forEach(c => {
@@ -237,7 +231,7 @@ export default function PadreComunicados() {
                       onToggle={() => setOpenSections(s => ({ ...s, asistencia: !s.asistencia }))}
                     />
                     {openSections.asistencia && recentAttendance.map(a => (
-                      <AttCard key={`${a.student_id}-${a.date}-${a.turno}`} a={a} />
+                      <AttCard key={`${a.student_id}-${toDateStr(a.date)}-${a.turno}`} a={a} />
                     ))}
                   </div>
                 )}

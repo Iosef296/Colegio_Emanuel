@@ -6,7 +6,7 @@ const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 export function usePushNotifications(user) {
   useEffect(() => {
-    if (!user || user.role !== 'padre' || !VAPID_KEY) return;
+    if (!user || user.role !== 'padre') return;
 
     async function register() {
       try {
@@ -27,7 +27,7 @@ export function usePushNotifications(user) {
             await api.post('/push-tokens', { token, platform: 'android' });
           });
         } else {
-          if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+          if (!VAPID_KEY || !('serviceWorker' in navigator) || !('Notification' in window)) return;
           const perm = await Notification.requestPermission();
           if (perm !== 'granted') return;
 

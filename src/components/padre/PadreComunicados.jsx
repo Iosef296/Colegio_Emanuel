@@ -4,6 +4,11 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import AvanceAdjuntos from '../common/AvanceAdjuntos';
 
 const formatDate = (d) => new Date(d).toLocaleDateString('es-PE');
+const formatDateShort = (d) =>
+  new Date(d + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
+
+const statusColor = { temprano: '#16A34A', tarde: '#D97706', falta: '#DC2626', justificado: '#2563EB' };
+const statusLabel = { temprano: 'Temprano', tarde: 'Tardanza', falta: 'Falta', justificado: 'Justificado' };
 
 const hexToRgba = (hex, alpha) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -28,6 +33,25 @@ function CommCard({ c, onClick }) {
   );
 }
 
+function AttCard({ a }) {
+  const c = statusColor[a.status] || '#64748B';
+  const label = statusLabel[a.status] || a.status;
+  const turnoLabel = a.turno === 'tarde' ? 'Tarde' : 'Mañana';
+  const tipoLabel = a.tipo === 'salida' ? '· Salida' : '';
+  return (
+    <div className="card" style={{ marginBottom: 8, borderLeft: `3px solid ${c}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{formatDateShort(a.date)}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{turnoLabel}{tipoLabel}</p>
+          {a.first_name && <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{a.first_name} {a.last_name}</p>}
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: c, background: c + '18', borderRadius: 10, padding: '3px 10px' }}>{label}</span>
+      </div>
+    </div>
+  );
+}
+
 function CourseSubSection({ name, comms, onSelect, color = 'var(--primary)' }) {
   const [open, setOpen] = useState(false);
   const rgb12 = color.startsWith('#') ? hexToRgba(color, 0.12) : 'rgba(37,99,235,0.12)';
@@ -46,30 +70,80 @@ function CourseSubSection({ name, comms, onSelect, color = 'var(--primary)' }) {
   );
 }
 
-const sectionHeader = (title, count, open, onToggle) => (
-  <div onClick={onToggle}
-    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 0', borderBottom: '2px solid var(--border)', marginBottom: open ? 12 : 0, userSelect: 'none' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 14, fontWeight: 700 }}>{title}</span>
-      <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: 20, padding: '1px 8px' }}>{count}</span>
+function SectionHeader({ title, count, open, onToggle }) {
+  return (
+    <div onClick={onToggle}
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 0', borderBottom: '2px solid var(--border)', marginBottom: open ? 12 : 0, userSelect: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>{title}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: 20, padding: '1px 8px' }}>{count}</span>
+      </div>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{open ? '▼' : '▶'}</span>
     </div>
-    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{open ? '▼' : '▶'}</span>
-  </div>
-);
+  );
+}
 
 export default function PadreComunicados() {
+  const [tab, setTab] = useState('comunicados');
   const [comms, setComms] = useState([]);
+  const [attendance, setAttendance] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [openSections, setOpenSections] = useState({ direccion: false, curso: false });
+  const [openSections, setOpenSections] = useState({ curso: true, asistencia: true });
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const isEarlyMonth = now.getDate() <= 7;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
 
   const load = useCallback(() => {
-    api.get('/communications').then(data => { setComms(data); setLoading(false); }).catch(console.error);
+    const attPrev = isEarlyMonth
+      ? api.get(`/attendance?month=${prevMonth}&year=${prevYear}`)
+      : Promise.resolve([]);
+    Promise.all([
+      api.get('/communications'),
+      api.get(`/attendance?month=${month}&year=${year}`),
+      attPrev,
+    ]).then(([c, a, ap]) => {
+      setComms(c);
+      setAttendance([...a, ...ap]);
+      setLoading(false);
+    }).catch(console.error);
   }, []);
   useEffect(() => { load(); }, [load]);
   useAutoRefresh(load);
 
   if (loading) return <div className="loading">Cargando...</div>;
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
+
+  const direccionComms = comms.filter(c => c.type === 'general' || c.type === 'grado');
+  const cursoComms = comms.filter(c =>
+    (c.type === 'curso' || c.type === 'alumno') && new Date(c.created_at) >= thirtyDaysAgo
+  );
+  const recentAttendance = attendance
+    .filter(a => {
+      const d = typeof a.date === 'string' ? a.date : a.date.toISOString().slice(0, 10);
+      return d >= sevenDaysAgoStr && a.tipo !== 'salida';
+    })
+    .sort((a, b) => {
+      const da = typeof a.date === 'string' ? a.date : a.date.toISOString().slice(0, 10);
+      const db = typeof b.date === 'string' ? b.date : b.date.toISOString().slice(0, 10);
+      return db.localeCompare(da);
+    });
+
+  const byCourse = {};
+  cursoComms.forEach(c => {
+    const k = c.course_name || c.grade_name || 'Sin curso';
+    if (!byCourse[k]) byCourse[k] = { items: [], color: c.course_color || 'var(--primary)' };
+    byCourse[k].items.push(c);
+  });
 
   if (selected) {
     return (
@@ -83,9 +157,7 @@ export default function PadreComunicados() {
         <div className="content-area">
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 4 }}>
-              <span className="badge badge-primary">
-                {selected.course_name || selected.grade_name || 'General'}
-              </span>
+              <span className="badge badge-primary">{selected.course_name || selected.grade_name || 'General'}</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(selected.created_at)}</span>
             </div>
             <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, wordBreak: 'break-word' }}>{selected.title}</h3>
@@ -98,42 +170,78 @@ export default function PadreComunicados() {
     );
   }
 
-  const direccionComms = comms.filter(c => c.type === 'general' || c.type === 'grado');
-  const cursoComms = comms.filter(c => c.type === 'curso' || c.type === 'alumno');
-
-  const byCourse = {};
-  cursoComms.forEach(c => {
-    const k = c.course_name || c.grade_name || 'Sin curso';
-    if (!byCourse[k]) byCourse[k] = { items: [], color: c.course_color || 'var(--primary)' };
-    byCourse[k].items.push(c);
-  });
-
   return (
     <div>
       <div className="page-header">
         <h1>Comunicados</h1>
         <p>Avisos y mensajes</p>
       </div>
-      <div className="content-area">
-        {comms.length === 0 ? (
-          <div className="empty-state"><p>No hay comunicados</p></div>
-        ) : (
-          <>
-            {direccionComms.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                {sectionHeader('Comunicados de Dirección', direccionComms.length, openSections.direccion, () => setOpenSections(s => ({ ...s, direccion: !s.direccion })))}
-                {openSections.direccion && direccionComms.map(c => <CommCard key={c.id} c={c} onClick={() => setSelected(c)} />)}
-              </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, padding: '0 16px 0', marginBottom: 0 }}>
+        {[
+          { key: 'comunicados', label: 'Comunicados', count: direccionComms.length },
+          { key: 'avisos', label: 'Avisos', count: cursoComms.length + recentAttendance.length },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
+              background: tab === t.key ? 'var(--primary)' : 'var(--bg)',
+              color: tab === t.key ? 'white' : 'var(--text-muted)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+            {t.label}
+            {t.count > 0 && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, minWidth: 16, height: 16, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+                background: tab === t.key ? 'rgba(255,255,255,0.25)' : 'var(--primary-light)',
+                color: tab === t.key ? 'white' : 'var(--primary)',
+              }}>{t.count}</span>
             )}
-            {cursoComms.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                {sectionHeader('Por Curso', cursoComms.length, openSections.curso, () => setOpenSections(s => ({ ...s, curso: !s.curso })))}
-                {openSections.curso && Object.entries(byCourse).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([name, { items, color }]) => (
-                  <CourseSubSection key={name} name={name} comms={items} color={color} onSelect={setSelected} />
-                ))}
-              </div>
-            )}
-          </>
+          </button>
+        ))}
+      </div>
+
+      <div className="content-area" style={{ paddingTop: 12 }}>
+        {tab === 'comunicados' && (
+          direccionComms.length === 0
+            ? <div className="empty-state"><p>No hay comunicados de Dirección</p></div>
+            : direccionComms.map(c => <CommCard key={c.id} c={c} onClick={() => setSelected(c)} />)
+        )}
+
+        {tab === 'avisos' && (
+          cursoComms.length === 0 && recentAttendance.length === 0
+            ? <div className="empty-state"><p>No hay avisos recientes</p></div>
+            : <>
+                {cursoComms.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <SectionHeader
+                      title="Comunicados de Curso"
+                      count={cursoComms.length}
+                      open={openSections.curso}
+                      onToggle={() => setOpenSections(s => ({ ...s, curso: !s.curso }))}
+                    />
+                    {openSections.curso && Object.entries(byCourse)
+                      .sort((a, b) => a[0].localeCompare(b[0], 'es'))
+                      .map(([name, { items, color }]) => (
+                        <CourseSubSection key={name} name={name} comms={items} color={color} onSelect={setSelected} />
+                      ))}
+                  </div>
+                )}
+                {recentAttendance.length > 0 && (
+                  <div>
+                    <SectionHeader
+                      title="Asistencia esta semana"
+                      count={recentAttendance.length}
+                      open={openSections.asistencia}
+                      onToggle={() => setOpenSections(s => ({ ...s, asistencia: !s.asistencia }))}
+                    />
+                    {openSections.asistencia && recentAttendance.map(a => (
+                      <AttCard key={`${a.student_id}-${a.date}-${a.turno}`} a={a} />
+                    ))}
+                  </div>
+                )}
+              </>
         )}
       </div>
     </div>

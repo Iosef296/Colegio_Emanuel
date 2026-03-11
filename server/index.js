@@ -19,6 +19,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import gradeLevelRoutes from './routes/grade-levels.js';
 import eventsRoutes from './routes/events.js';
 import uploadRoutes from './routes/upload.js';
+import pushTokenRoutes from './routes/push-tokens.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -46,6 +47,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/grade-levels', gradeLevelRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/push-tokens', pushTokenRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -62,6 +64,24 @@ pool.query("ALTER TYPE communication_type ADD VALUE IF NOT EXISTS 'alumno'")
 
 pool.query('ALTER TABLE daily_progress ADD COLUMN IF NOT EXISTS photo_url TEXT')
   .then(() => console.log('DB: columna photo_url OK'))
+  .catch(err => console.error('DB migration error:', err.message));
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS push_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    platform VARCHAR(20) NOT NULL DEFAULT 'web',
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, token)
+  )
+`).then(() => console.log('DB: push_tokens OK')).catch(err => console.error(err.message));
+pool.query(`CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id)`).catch(() => {});
+pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS p256dh TEXT`).catch(() => {});
+pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS auth_key TEXT`).catch(() => {});
+
+pool.query('ALTER TABLE students ADD COLUMN IF NOT EXISTS photo_url TEXT')
+  .then(() => console.log('DB: students.photo_url OK'))
   .catch(err => console.error('DB migration error:', err.message));
 
 pool.query('ALTER TABLE daily_progress ADD COLUMN IF NOT EXISTS attachments TEXT')

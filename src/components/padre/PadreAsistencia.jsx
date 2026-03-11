@@ -175,10 +175,23 @@ export default function PadreAsistencia() {
                       }
                       const c = man ? statusColor[man] : statusColor[tar];
                       const label = man ? statusLabel[man] : statusLabel[tar];
+                      if (wHasTarde) {
+                        return (
+                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            {numBox}
+                            <div style={{ background: man ? statusColor[man] + '25' : 'transparent', borderLeft: `2px solid ${man ? statusColor[man] : 'transparent'}`, borderRight: `2px solid ${man ? statusColor[man] : 'transparent'}`, borderBottom: `2px solid ${man ? statusColor[man] : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
+                              {man && <span style={{ fontSize: 7, fontWeight: 700, color: statusColor[man], lineHeight: 1 }}>{`M: ${statusLabel[man]}`}</span>}
+                            </div>
+                            <div style={{ background: tar ? statusColor[tar] + '25' : 'transparent', borderLeft: `2px solid ${tar ? statusColor[tar] : 'transparent'}`, borderRight: `2px solid ${tar ? statusColor[tar] : 'transparent'}`, borderBottom: `2px solid ${tar ? statusColor[tar] : 'transparent'}`, borderRadius: '0 0 10px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
+                              {tar && <span style={{ fontSize: 7, fontWeight: 700, color: statusColor[tar], lineHeight: 1 }}>{`T: ${statusLabel[tar]}`}</span>}
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                           {numBox}
-                          <div style={{ flex: wHasTarde ? 1 : undefined, padding: wHasTarde ? undefined : '4px 0', background: c + '25', border: `2px solid ${c}`, borderTop: 'none', borderRadius: '0 0 10px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ padding: '4px 0', background: c + '25', border: `2px solid ${c}`, borderTop: 'none', borderRadius: '0 0 10px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <span style={{ fontSize: 7, fontWeight: 700, color: c, lineHeight: 1 }}>{label}</span>
                           </div>
                         </div>

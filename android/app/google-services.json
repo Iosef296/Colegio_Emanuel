@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "691644196163",
+    "project_id": "colegio-emanuel-92955",
+    "storage_bucket": "colegio-emanuel-92955.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691644196163:android:81f9fe173f91394dda3bf6",
+        "android_client_info": {
+          "package_name": "com.colegioemanuel.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtSJIG6d-wmfh_1TNCqMgAeUTOm3Rl9FU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

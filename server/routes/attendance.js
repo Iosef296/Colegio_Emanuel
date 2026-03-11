@@ -2,9 +2,31 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 import { broadcast } from '../utils/sse.js';
+import { getParentIdsForStudent, getTokensForUsers, sendToTokens } from '../utils/fcm.js';
+import { getWebSubscriptionsForUsers, sendWebPush } from '../utils/webpush.js';
 
 const router = Router();
 router.use(authenticateToken);
+
+async function getStudentName(studentId) {
+  const [rows] = await pool.query('SELECT first_name, last_name FROM students WHERE id=?', [studentId]);
+  if (!rows.length) return 'Tu hijo';
+  return `${rows[0].first_name} ${rows[0].last_name}`;
+}
+
+function peruTime() {
+  return new Date().toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function buildNotification(name, status) {
+  const hora = peruTime();
+  const body = status === 'temprano'
+    ? `${name} llegó a las ${hora}`
+    : status === 'tarde'
+    ? `${name} llegó tarde a las ${hora}`
+    : `${name} faltó hoy`;
+  return { title: 'ASISTENCIA REGISTRADA', body };
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -51,6 +73,22 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
     );
     broadcast();
     res.status(201).json({ message: 'Asistencia registrada' });
+    const notifData = { type: 'attendance', student_id: String(student_id) };
+    getStudentName(student_id).then(name => {
+      const notification = buildNotification(name, status);
+      if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        getParentIdsForStudent(student_id)
+          .then(ids => getTokensForUsers(ids))
+          .then(tokens => sendToTokens(tokens, notification, notifData))
+          .catch(err => console.error('Push attendance FCM:', err.message));
+      }
+      if (process.env.VAPID_PRIVATE_KEY) {
+        getParentIdsForStudent(student_id)
+          .then(ids => getWebSubscriptionsForUsers(ids))
+          .then(subs => sendWebPush(subs, notification, notifData))
+          .catch(err => console.error('Push attendance web:', err.message));
+      }
+    }).catch(err => console.error('Push attendance name:', err.message));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });
@@ -75,6 +113,23 @@ router.post('/bulk', authorizeRoles('docente', 'admin', 'auxiliar'), async (req,
     );
     broadcast();
     res.status(201).json({ message: `${records.length} registros guardados` });
+    Promise.all(records.map(async r => {
+      const name = await getStudentName(r.student_id);
+      const notification = buildNotification(name, r.status);
+      const notifData = { type: 'attendance', student_id: String(r.student_id) };
+      if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        getParentIdsForStudent(r.student_id)
+          .then(ids => getTokensForUsers(ids))
+          .then(tokens => sendToTokens(tokens, notification, notifData))
+          .catch(err => console.error('Push bulk FCM:', err.message));
+      }
+      if (process.env.VAPID_PRIVATE_KEY) {
+        getParentIdsForStudent(r.student_id)
+          .then(ids => getWebSubscriptionsForUsers(ids))
+          .then(subs => sendWebPush(subs, notification, notifData))
+          .catch(err => console.error('Push bulk web:', err.message));
+      }
+    })).catch(err => console.error('Push bulk:', err.message));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });

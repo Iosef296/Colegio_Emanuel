@@ -34,9 +34,18 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    let photo_url = null;
+    if (user.role === 'padre') {
+      const [photos] = await pool.query(
+        'SELECT s.photo_url FROM students s JOIN parent_student ps ON ps.student_id = s.id WHERE ps.parent_id = ? AND s.photo_url IS NOT NULL LIMIT 1',
+        [user.id]
+      );
+      if (photos.length > 0) photo_url = photos[0].photo_url;
+    }
+
     res.json({
       token,
-      user: { id: user.id, username: user.username, role: user.role, full_name: user.full_name }
+      user: { id: user.id, username: user.username, role: user.role, full_name: user.full_name, photo_url }
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -51,7 +60,15 @@ router.get('/me', authenticateToken, async (req, res) => {
       [req.user.id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
-    res.json(rows[0]);
+    const userData = rows[0];
+    if (userData.role === 'padre') {
+      const [photos] = await pool.query(
+        'SELECT s.photo_url FROM students s JOIN parent_student ps ON ps.student_id = s.id WHERE ps.parent_id = ? AND s.photo_url IS NOT NULL LIMIT 1',
+        [userData.id]
+      );
+      userData.photo_url = photos.length > 0 ? photos[0].photo_url : null;
+    }
+    res.json(userData);
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor' });
   }

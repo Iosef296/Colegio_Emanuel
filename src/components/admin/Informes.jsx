@@ -119,12 +119,27 @@ function AttendanceCalendar({ attendance }) {
                           </div>
                         );
                       }
+                      if (wHasTarde) {
+                        const mc = man ? (STATUS_COLOR[man] || '#2563EB') : null;
+                        const tc = tar ? (STATUS_COLOR[tar] || '#2563EB') : null;
+                        return (
+                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            {numBox}
+                            <div style={{ background: mc ? mc + '25' : 'transparent', borderLeft: `2px solid ${mc || 'transparent'}`, borderRight: `2px solid ${mc || 'transparent'}`, borderBottom: `2px solid ${mc || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
+                              {man && <span style={{ fontSize: 7, fontWeight: 700, color: mc, lineHeight: 1 }}>{`M: ${STATUS_LABEL[man] || man}`}</span>}
+                            </div>
+                            <div style={{ background: tc ? tc + '25' : 'transparent', borderLeft: `2px solid ${tc || 'transparent'}`, borderRight: `2px solid ${tc || 'transparent'}`, borderBottom: `2px solid ${tc || 'transparent'}`, borderRadius: '0 0 10px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0' }}>
+                              {tar && <span style={{ fontSize: 7, fontWeight: 700, color: tc, lineHeight: 1 }}>{`T: ${STATUS_LABEL[tar] || tar}`}</span>}
+                            </div>
+                          </div>
+                        );
+                      }
                       const c = man ? (STATUS_COLOR[man] || '#2563EB') : (STATUS_COLOR[tar] || '#2563EB');
                       const lbl = man ? (STATUS_LABEL[man] || man) : (STATUS_LABEL[tar] || tar);
                       return (
                         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                           {numBox}
-                          <div style={{ flex: wHasTarde ? 1 : undefined, padding: wHasTarde ? undefined : '4px 0', background: c + '25', border: `2px solid ${c}`, borderTop: 'none', borderRadius: '0 0 10px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ padding: '4px 0', background: c + '25', border: `2px solid ${c}`, borderTop: 'none', borderRadius: '0 0 10px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <span style={{ fontSize: 7, fontWeight: 700, color: c, lineHeight: 1 }}>{lbl}</span>
                           </div>
                         </div>

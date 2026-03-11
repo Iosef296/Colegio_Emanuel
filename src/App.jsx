@@ -56,7 +56,7 @@ export default function App() {
       <Route path="/padre" element={<ProtectedRoute roles={['padre']}><Layout><PadreDashboard /></Layout></ProtectedRoute>} />
       <Route path="/padre/cursos" element={<ProtectedRoute roles={['padre']}><Layout><PadreCursos /></Layout></ProtectedRoute>} />
       <Route path="/padre/cursos/:id" element={<ProtectedRoute roles={['padre']}><Layout><PadreCursoDetalle /></Layout></ProtectedRoute>} />
-      <Route path="/padre/notas" element={<ProtectedRoute roles={['padre']}><Layout><PadreNotas /></Layout></ProtectedRoute>} />
+      <Route path="/padre/notas" element={<Navigate to="/padre/cursos" replace />} />
       <Route path="/padre/asistencia" element={<ProtectedRoute roles={['padre']}><Layout><PadreAsistencia /></Layout></ProtectedRoute>} />
       <Route path="/padre/mensualidades" element={<ProtectedRoute roles={['padre']}><Layout><PadreMensualidades /></Layout></ProtectedRoute>} />
       <Route path="/padre/comunicados" element={<ProtectedRoute roles={['padre']}><Layout><PadreComunicados /></Layout></ProtectedRoute>} />

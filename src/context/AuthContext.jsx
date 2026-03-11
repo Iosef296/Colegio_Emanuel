@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const AuthContext = createContext(null);
 
@@ -11,6 +12,7 @@ export function AuthProvider({ children }) {
   // loading is always false — user is trusted from localStorage immediately.
   // If token is expired, API calls will return 401 and client.js handles the redirect.
   const loading = false;
+  usePushNotifications(user);
 
   useEffect(() => {
     const token = localStorage.getItem('token');

@@ -14,6 +14,8 @@ export default function AdminAlumnos() {
   const [form, setForm] = useState({ first_name: '', last_name: '', dni: '', birth_date: '', grade_level_id: '', monthly_fee: '350' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [qrStudent, setQrStudent] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
 
@@ -56,6 +58,17 @@ export default function AdminAlumnos() {
     setEditing(null);
     setShowForm(false);
     setMessage('');
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoPreview(ev.target.result);
+    reader.readAsDataURL(file);
   };
 
   const handleEdit = async (s) => {
@@ -75,6 +88,8 @@ export default function AdminAlumnos() {
       grade_level_id: s.grade_level_id,
       monthly_fee,
     });
+    setPhotoFile(null);
+    setPhotoPreview(s.photo_url || null);
     setEditing(s.id);
     setShowForm(true);
   };
@@ -90,7 +105,14 @@ export default function AdminAlumnos() {
 
     setSaving(true);
     try {
-      const data = { ...form, first_name: trimmedFirst, last_name: trimmedLast, grade_level_id: Number(form.grade_level_id), monthly_fee: Number(form.monthly_fee) };
+      let photo_url = photoFile ? null : (photoPreview || null);
+      if (photoFile) {
+        const fd = new FormData();
+        fd.append('photo', photoFile);
+        const result = await api.upload('/upload', fd);
+        photo_url = result.url;
+      }
+      const data = { ...form, first_name: trimmedFirst, last_name: trimmedLast, grade_level_id: Number(form.grade_level_id), monthly_fee: Number(form.monthly_fee), photo_url };
       if (editing) {
         await api.put(`/students/${editing}`, data);
         setMessage('Alumno actualizado');
@@ -175,6 +197,18 @@ export default function AdminAlumnos() {
             <h3>{editing ? 'Editar Alumno' : 'Nuevo Alumno'}</h3>
             {message && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: message.includes('Error') ? '#FEE2E2' : '#D1FAE5', color: message.includes('Error') ? 'var(--danger)' : 'var(--success)', fontSize: 13 }}>{message}</div>}
             <form onSubmit={handleSubmit}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <label htmlFor="student-photo-input" style={{ cursor: 'pointer' }}>
+                  <div style={{ width: 80, height: 80, borderRadius: '50%', border: `2px dashed ${photoPreview ? 'var(--primary)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden', background: '#F9FAFB' }}>
+                    {photoPreview
+                      ? <img src={photoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <Icon name="camera" color="var(--text-muted)" size={28} />
+                    }
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Toca para tomar o escoger foto</p>
+                </label>
+                <input id="student-photo-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+              </div>
               <div className="form-group">
                 <label className="form-label">Nombres</label>
                 <input className="form-input" value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} required />
@@ -289,8 +323,11 @@ export default function AdminAlumnos() {
           {gradeStudents.map(s => (
             <div key={s.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="user" color="var(--success)" size={20} />
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {s.photo_url
+                    ? <img src={s.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <Icon name="user" color="var(--success)" size={20} />
+                  }
                 </div>
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>

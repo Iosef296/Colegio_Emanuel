@@ -6,12 +6,11 @@ import Icon from './Icon';
 const NAV_ITEMS = {
   padre: [
     { to: '/padre', icon: 'home', label: 'Inicio', end: true },
-    { to: '/padre/cursos', icon: 'book', label: 'Cursos' },
-    { to: '/padre/notas', icon: 'star', label: 'Notas' },
+    { to: '/padre/cursos', icon: 'star', label: 'Notas' },
     { to: '/padre/asistencia', icon: 'calendar', label: 'Asistencia' },
-    { to: '/padre/mensualidades', icon: 'dollar', label: 'Pagos' },
-    { to: '/padre/comunicados', icon: 'bell', label: 'Comunicados' },
+    { to: '/padre/mensualidades', icon: 'dollar', label: 'Mensualidades' },
     { to: '/padre/avances', icon: 'chart', label: 'Avances' },
+    { to: '/padre/comunicados', icon: 'bell', label: 'Comunicados' },
   ],
   docente: [
     { to: '/docente', icon: 'home', label: 'Inicio', end: true },
@@ -40,9 +39,11 @@ const NAV_ITEMS = {
 const MOBILE_NAV = {
   padre: [
     { to: '/padre', icon: 'home', label: 'Inicio', end: true },
-    { to: '/padre/cursos', icon: 'book', label: 'Cursos' },
-    { to: '/padre/notas', icon: 'star', label: 'Notas' },
-    { to: '/padre/comunicados', icon: 'bell', label: 'Avisos' },
+    { to: '/padre/cursos', icon: 'star', label: 'Notas' },
+    { to: '/padre/asistencia', icon: 'calendar', label: 'Asistencia' },
+    { to: '/padre/mensualidades', icon: 'dollar', label: 'Mensualidades' },
+    { to: '/padre/avances', icon: 'chart', label: 'Avances' },
+    { to: '/padre/comunicados', icon: 'bell', label: 'Comunicados' },
   ],
   docente: [
     { to: '/docente', icon: 'home', label: 'Inicio', end: true },
@@ -116,8 +117,11 @@ export default function Layout({ children }) {
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <div className="sidebar-user-avatar">
-              <Icon name="user" color="white" size={18} />
+            <div className="sidebar-user-avatar" style={{ overflow: 'hidden', padding: 0 }}>
+              {user?.photo_url
+                ? <img src={user.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <Icon name="user" color="white" size={18} />
+              }
             </div>
             <div className="sidebar-user-info">
               <p>{user?.full_name}</p>

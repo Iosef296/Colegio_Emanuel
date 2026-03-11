@@ -57,6 +57,10 @@ export default function AdminPagos() {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-PE') : null;
 
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const currentMonth = MONTHS[new Date().getMonth()];
+  const currentYear = new Date().getFullYear();
+
   // Build grade groups from students
   const gradeMap = {};
   students.forEach(s => {
@@ -152,19 +156,19 @@ export default function AdminPagos() {
         </div>
         <div className="content-area">
           {gradeStudents.map(s => {
-            const pending = pendingByStudent(s.id);
+            const paidThisMonth = payments.some(p => p.student_id === s.id && p.paid && p.month === currentMonth && p.year === currentYear);
             return (
               <div key={s.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 8 }}
                 onClick={() => setSelectedStudent(s)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: pending > 0 ? '#FEE2E2' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name="user" color={pending > 0 ? 'var(--danger)' : 'var(--success)'} size={18} />
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: paidThisMonth ? '#D1FAE5' : '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name="user" color={paidThisMonth ? 'var(--success)' : 'var(--danger)'} size={18} />
                   </div>
                   <div>
                     <p style={{ fontSize: 14, fontWeight: 700 }}>{s.first_name} {s.last_name}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {pending > 0 ? `Debe S/ ${pending.toFixed(0)}` : 'Al día'}
-                    </p>
+                    <span style={{ fontSize: 11, fontWeight: 600, background: paidThisMonth ? '#D1FAE5' : '#FEE2E2', color: paidThisMonth ? '#16A34A' : '#DC2626', borderRadius: 6, padding: '2px 7px' }}>
+                      {currentMonth} {currentYear}: {paidThisMonth ? 'Pagado' : 'Pendiente'}
+                    </span>
                   </div>
                 </div>
                 <Icon name="back" color="var(--text-muted)" size={18} style={{ transform: 'rotate(180deg)' }} />
@@ -226,15 +230,16 @@ export default function AdminPagos() {
         {/* Summary per student */}
 
         {grades.map(g => {
-          const pending = pendingByGrade(g.grade_level_id);
           const total = (gradeMap[g.grade_level_id]?.students || []).length;
-          const deudores = (gradeMap[g.grade_level_id]?.students || []).filter(s => pendingByStudent(s.id) > 0).length;
+          const deudores = (gradeMap[g.grade_level_id]?.students || []).filter(s =>
+            !payments.some(p => p.student_id === s.id && p.paid && p.month === currentMonth && p.year === currentYear)
+          ).length;
           return (
             <div key={g.grade_level_id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 8 }}
               onClick={() => setSelectedGrade(g)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: pending > 0 ? '#FEE2E2' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="users" color={pending > 0 ? 'var(--danger)' : 'var(--success)'} size={20} />
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: deudores > 0 ? '#FEE2E2' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="users" color={deudores > 0 ? 'var(--danger)' : 'var(--success)'} size={20} />
                 </div>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 700 }}>{g.grade_name} "{g.section}"</p>

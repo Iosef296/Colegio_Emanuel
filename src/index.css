@@ -441,6 +441,25 @@ body {
 }
 
 /* Responsive */
+.header-photo-mobile {
+  display: none;
+}
+@media (max-width: 768px) {
+  .header-photo-mobile {
+    display: block;
+    height: 62px;
+    width: 62px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.4);
+  }
+  .header-photo-mobile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);

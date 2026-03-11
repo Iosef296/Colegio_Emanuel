@@ -39,34 +39,35 @@ export default function PadreDashboard() {
     <div>
       {/* Header */}
       <div className="page-header" style={{ paddingBottom: 60, borderRadius: '0 0 30px 30px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-          <div>
-            <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
-            <h1>{student?.name || user.full_name}</h1>
-          </div>
-          <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/padre/comunicados')}>
-            <Icon name="bell" color="white" size={22} />
-            {stats.comunicados > 0 && (
-              <div style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, background: 'var(--danger)', borderRadius: '50%', border: '2px solid var(--nav-bg)' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {user?.photo_url && (
+              <div className="header-photo-mobile">
+                <img src={user.photo_url} />
+              </div>
             )}
+            <div>
+              <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
+              <h1>{student?.name || user.full_name}</h1>
+              {student && (
+                <p style={{ opacity: 0.8, fontSize: 13, marginTop: 2 }}>
+                  {student.grade}{student.section ? ` "${student.section}"` : ''}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-        {student && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <p style={{ opacity: 0.8, fontSize: 13 }}>
-              {student.grade} "{student.section}"
-            </p>
+          <div>
             {qrDataUrl && (
               <button
                 onClick={() => setShowQr(true)}
-                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 12 }}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'white', fontSize: 14, fontWeight: 600 }}
               >
-                <Icon name="qr" color="white" size={16} />
+                <Icon name="qr" color="white" size={22} />
                 <span>QR</span>
               </button>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Debt alert */}
@@ -81,12 +82,12 @@ export default function PadreDashboard() {
 
       {/* Stats */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, padding: '0 16px', marginTop: stats.deudaTotal > 0 ? 12 : -40, marginBottom: 20 }}>
-        {/* Pagos vencidos (regla del 15) */}
+        {/* Días de retraso */}
         <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: stats.deudaVencida > 0 ? '#FEE2E2' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: stats.deudaVencida > 0 ? 'var(--danger)' : 'var(--warning)' }}>{stats.deudaVencida || 0}</span>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: stats.diasRetraso > 0 ? '#FEE2E2' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: stats.diasRetraso > 0 ? 'var(--danger)' : 'var(--success)' }}>{stats.diasRetraso || 0}</span>
           </div>
-          <p className="stat-label">Pagos<br />Vencidos</p>
+          <p className="stat-label">Días de<br />Retraso</p>
         </div>
         {/* Tareas pendientes */}
         <div className="stat-card" style={{ flex: 1, minWidth: 90 }}>
@@ -99,12 +100,12 @@ export default function PadreDashboard() {
         <div
           className="stat-card"
           style={{ flex: 1, minWidth: 90, cursor: 'pointer' }}
-          onClick={() => stats.mesActualPagado ? navigate('/padre/notas') : setShowPayModal(true)}
+          onClick={() => navigate('/padre/cursos')}
         >
           <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-            <Icon name="eye" color="var(--primary)" size={18} />
+            <Icon name="star" color="var(--primary)" size={18} />
           </div>
-          <p className="stat-label">Promedio<br />Actual</p>
+          <p className="stat-label">Ver<br />Notas</p>
         </div>
       </div>
 
@@ -113,8 +114,7 @@ export default function PadreDashboard() {
         <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Menú Principal</h3>
         <div className="grid-2">
           {[
-            { icon: 'book', label: 'Cursos', desc: 'Ver materias', to: '/padre/cursos', color: '#3B82F6', bg: '#EFF6FF' },
-            { icon: 'star', label: 'Notas', desc: 'Calificaciones', to: '/padre/notas', color: '#F59E0B', bg: '#FEF3C7' },
+            { icon: 'book', label: 'Cursos', desc: 'Ver materias y notas', to: '/padre/cursos', color: '#3B82F6', bg: '#EFF6FF' },
             { icon: 'calendar', label: 'Asistencia', desc: 'Control diario', to: '/padre/asistencia', color: '#10B981', bg: '#D1FAE5' },
             { icon: 'dollar', label: 'Mensualidades', desc: 'Estado de pagos', to: '/padre/mensualidades', color: '#8B5CF6', bg: '#EDE9FE' },
             { icon: 'bell', label: 'Comunicados', desc: 'Avisos y tareas', to: '/padre/comunicados', color: '#EC4899', bg: '#FCE7F3' },
@@ -152,10 +152,12 @@ export default function PadreDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setShowQr(false)}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{student.name}</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{student.grade} "{student.section}"</p>
-            <img src={qrDataUrl} alt="QR Code" style={{ width: 280, height: 280, display: 'block', margin: '0 auto 12px' }} />
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: 'monospace' }}>{student.codigo}</p>
-            <button onClick={() => setShowQr(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{student.grade}{student.section ? ` "${student.section}"` : ''}</p>
+            <img src={qrDataUrl} alt="QR Code" style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { const a = document.createElement('a'); a.href = qrDataUrl; a.download = `QR-${student.name}.png`; a.click(); }} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Descargar</button>
+              <button onClick={() => setShowQr(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}

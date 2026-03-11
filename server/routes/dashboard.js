@@ -34,14 +34,19 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
     );
     const MONTH_NUM = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12 };
     const today = new Date();
-    let deudaTotal = 0, deudaVencida = 0;
+    let deudaTotal = 0, deudaVencida = 0, diasRetraso = 0;
+    let earliestDueDate = null;
     for (const p of unpaidPayments) {
-      let dueMonth = MONTH_NUM[p.month] + 1, dueYear = Number(p.year);
-      if (dueMonth > 12) { dueMonth = 1; dueYear++; }
-      if (today > new Date(dueYear, dueMonth - 1, 15)) {
+      const monthNum = MONTH_NUM[p.month];
+      const dueDate = new Date(Number(p.year), monthNum - 1, 5); // día 5 del mismo mes
+      if (today > dueDate) {
         deudaTotal += Number(p.amount);
         deudaVencida++;
+        if (!earliestDueDate || dueDate < earliestDueDate) earliestDueDate = dueDate;
       }
+    }
+    if (earliestDueDate) {
+      diasRetraso = Math.floor((today - earliestDueDate) / (1000 * 60 * 60 * 24));
     }
 
     // Recent attendance
@@ -92,6 +97,7 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
         pagosPendientes: unpaidPayments.length,
         deudaTotal: deudaTotal,
         deudaVencida: deudaVencida,
+        diasRetraso: diasRetraso,
         tareasPendientes: Number(tareas[0].total),
         mesActualPagado: mesActualPagado,
         asistencia: attendanceMap,

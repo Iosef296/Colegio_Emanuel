@@ -59,10 +59,10 @@ router.get('/', async (req, res) => {
 
 router.post('/', authorizeRoles('admin'), async (req, res) => {
   try {
-    const { first_name, last_name, dni, birth_date, grade_level_id, monthly_fee } = req.body;
+    const { first_name, last_name, dni, birth_date, grade_level_id, monthly_fee, photo_url } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO students (first_name, last_name, dni, birth_date, grade_level_id) VALUES (?,?,?,?,?) RETURNING id',
-      [first_name, last_name, dni, birth_date, grade_level_id]
+      'INSERT INTO students (first_name, last_name, dni, birth_date, grade_level_id, photo_url) VALUES (?,?,?,?,?,?) RETURNING id',
+      [first_name, last_name, dni, birth_date, grade_level_id, photo_url || null]
     );
     const id = result[0].id;
     const year = new Date().getFullYear();
@@ -123,7 +123,7 @@ router.post('/:id/codigo', authorizeRoles('admin'), async (req, res) => {
 
 router.put('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
-    const { first_name, last_name, dni, birth_date, grade_level_id, active, monthly_fee } = req.body;
+    const { first_name, last_name, dni, birth_date, grade_level_id, active, monthly_fee, photo_url } = req.body;
     const fields = [];
     const values = [];
 
@@ -133,6 +133,7 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
     if (birth_date !== undefined) { fields.push('birth_date=?'); values.push(birth_date); }
     if (grade_level_id !== undefined) { fields.push('grade_level_id=?'); values.push(grade_level_id); }
     if (active !== undefined) { fields.push('active=?'); values.push(active); }
+    if (photo_url !== undefined) { fields.push('photo_url=?'); values.push(photo_url || null); }
 
     if (fields.length === 0 && monthly_fee === undefined) return res.status(400).json({ error: 'Sin campos' });
 

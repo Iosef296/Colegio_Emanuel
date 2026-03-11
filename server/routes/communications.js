@@ -2,6 +2,8 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 import { broadcast } from '../utils/sse.js';
+import { getParentIdsForStudent, getTokensForUsers, sendToTokens } from '../utils/fcm.js';
+import { getWebSubscriptionsForUsers, sendWebPush } from '../utils/webpush.js';
 
 const router = Router();
 router.use(authenticateToken);
@@ -69,6 +71,22 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
     );
     broadcast();
     res.status(201).json({ id: result[0].id });
+    if (type === 'alumno' && student_ids?.length) {
+      const notification = { title: 'Nuevo comunicado', body: title };
+      const notifData = { type: 'communication' };
+      if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        Promise.all(student_ids.map(sid => getParentIdsForStudent(sid)))
+          .then(nested => getTokensForUsers([...new Set(nested.flat())]))
+          .then(tokens => sendToTokens(tokens, notification, notifData))
+          .catch(err => console.error('Push communication FCM:', err.message));
+      }
+      if (process.env.VAPID_PRIVATE_KEY) {
+        Promise.all(student_ids.map(sid => getParentIdsForStudent(sid)))
+          .then(nested => getWebSubscriptionsForUsers([...new Set(nested.flat())]))
+          .then(subs => sendWebPush(subs, notification, notifData))
+          .catch(err => console.error('Push communication web:', err.message));
+      }
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });

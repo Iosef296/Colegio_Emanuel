@@ -3,7 +3,7 @@
   "appName": "Colegio Emanuel",
   "webDir": "dist",
   "server": {
-    "url": "https://colegio-emanuel.pages.dev",
+    "url": "https://colegioemanuel.es",
     "cleartext": false
   },
   "android": {

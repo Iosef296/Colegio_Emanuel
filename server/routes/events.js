@@ -10,6 +10,7 @@ router.get('/', (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
+  res.write('retry: 1000\n\n');
   res.write(': connected\n\n');
   addClient(res);
 

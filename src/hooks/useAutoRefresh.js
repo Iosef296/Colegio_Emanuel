@@ -29,7 +29,7 @@ export function useAutoRefresh(fn) {
         es.onmessage = tick;
         es.onerror = () => {
           es.close();
-          retryTimeout = setTimeout(connect, 5000);
+          retryTimeout = setTimeout(connect, 1000);
         };
       } catch { /* SSE not supported */ }
     };

@@ -26,6 +26,10 @@ export function usePushNotifications(user) {
           PushNotifications.addListener('registration', async ({ value: token }) => {
             await api.post('/push-tokens', { token, platform: 'android' });
           });
+          // Dispatch refresh event when push arrives (foreground or tapped from background)
+          const refresh = () => window.dispatchEvent(new CustomEvent('server-change'));
+          PushNotifications.addListener('pushNotificationReceived', refresh);
+          PushNotifications.addListener('pushNotificationActionPerformed', refresh);
         } else {
           if (!VAPID_KEY || !('serviceWorker' in navigator) || !('Notification' in window)) return;
           const perm = await Notification.requestPermission();

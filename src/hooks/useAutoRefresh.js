@@ -40,6 +40,10 @@ export function useAutoRefresh(fn) {
     const onVisible = () => { if (document.visibilityState === 'visible') tick(); };
     document.addEventListener('visibilitychange', onVisible);
 
+    // Capacitor: refresh when push notification signals a server change
+    const onServerChange = () => tick();
+    window.addEventListener('server-change', onServerChange);
+
     // Capacitor: listen for app coming to foreground — more reliable than visibilitychange on Android
     let removeAppListener;
     if (IS_CAPACITOR) {
@@ -60,6 +64,7 @@ export function useAutoRefresh(fn) {
       clearTimeout(retryTimeout);
       clearTimeout(debounce);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('server-change', onServerChange);
       es?.close();
       removeAppListener?.();
     };

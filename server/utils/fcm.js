@@ -87,7 +87,7 @@ export async function sendToTokens(tokens, { title, body }, data = {}) {
               priority: 'high',
               notification: {
                 channel_id: 'default',
-                priority: 'high',
+                notification_priority: 'PRIORITY_HIGH',
                 default_vibrate_timings: true,
                 sound: 'default',
               },
@@ -98,12 +98,15 @@ export async function sendToTokens(tokens, { title, body }, data = {}) {
           },
         }),
       });
+      const resJson = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const errCode = err.error?.details?.[0]?.errorCode || err.error?.status;
+        const errCode = resJson.error?.details?.[0]?.errorCode || resJson.error?.status;
+        console.error(`[FCM] error status=${res.status} code=${errCode} token=${token.slice(0,20)}... msg=${JSON.stringify(resJson.error?.message)}`);
         if (errCode === 'UNREGISTERED' || res.status === 404) {
           deadTokens.push(token);
         }
+      } else {
+        console.log(`[FCM] OK → ${resJson.name || 'sent'} token=${token.slice(0,20)}...`);
       }
     } catch (e) {
       console.warn('FCM send error for token:', e.message);

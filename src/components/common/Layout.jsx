@@ -155,8 +155,7 @@ export default function Layout({ children }) {
           el bloque de perfil del usuario y el botón de cerrar sesión. */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <img src="/logo.png" alt="Colegio Emanuel" style={{ width: 48, height: 48, objectFit: 'contain', marginBottom: 6 }} />
-          <h2>Colegio Emanuel</h2>
+          <img src="/logo.png" alt="Colegio Emanuel" style={{ width: 180, height: 180, objectFit: 'contain' }} />
         </div>
         <nav className="sidebar-nav">
           {/* Generamos un NavLink por cada item del rol activo.

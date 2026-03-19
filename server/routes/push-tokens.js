@@ -33,8 +33,8 @@ router.use(authenticateToken);
  */
 router.post('/', async (req, res) => {
   try {
-    // Solo los padres reciben notificaciones push; ignorar silenciosamente otros roles.
-    if (req.user.role !== 'padre') return res.json({ ok: true }); // solo padres reciben notificaciones
+    // Solo padres y docentes reciben notificaciones push.
+    if (req.user.role !== 'padre' && req.user.role !== 'docente') return res.json({ ok: true });
 
     const { token, platform = 'web', endpoint, p256dh, auth } = req.body;
 

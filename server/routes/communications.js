@@ -146,11 +146,16 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
         // Si el comunicado es para alumnos específicos, obtener los padres de cada uno.
         ? Promise.all(student_ids.map(sid => getParentIdsForStudent(sid))).then(n => [...new Set(n.flat())])
         : grade_level_id
-          // Si es por grado, obtener los padres de alumnos activos de ese grado.
+          // Si es por grado, obtener los padres de alumnos activos del grado.
+          // La condición OR incluye tanto alumnos asignados directamente (grade_level_id)
+          // como alumnos miembros del grupo (group_members), para cubrir los círculos de estudio.
           ? pool._pool.query(
               `SELECT DISTINCT ps.parent_id FROM parent_student ps
                JOIN students s ON s.id = ps.student_id
-               WHERE s.grade_level_id = $1 AND s.active = true`,
+               WHERE s.active = true AND (
+                 s.grade_level_id = $1
+                 OR EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = $1 AND gm.student_id = s.id)
+               )`,
               [grade_level_id]
             ).then(r => r.rows.map(row => row.parent_id))
           // Si es general (toda la escuela), notificar a todos los padres vinculados.
@@ -174,9 +179,21 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
             [student_ids]
           ).then(r => r.rows.map(s => s.name).join(', '))
         : Promise.resolve(null),
-    ]).then(([parentIds, courseName, gradeName, studentNames]) => {
-      // Si no hay padres destinatarios, no se envía nada.
-      if (!parentIds.length) return;
+
+      // [4] IDs de docentes destinatarios: solo para comms general/grado del director/secretaria/auxiliar.
+      // general → todos los docentes activos; grado → docentes que dictan en ese grado.
+      (type === 'general' || type === 'grado') && (req.user.role === 'director' || req.user.role === 'secretaria' || req.user.role === 'auxiliar' || req.user.role === 'admin')
+        ? grade_level_id
+          ? pool._pool.query(
+              `SELECT DISTINCT teacher_id AS id FROM teacher_courses WHERE grade_level_id=$1`,
+              [grade_level_id]
+            ).then(r => r.rows.map(row => row.id))
+          : pool._pool.query(`SELECT id FROM users WHERE role='docente'`)
+              .then(r => r.rows.map(row => row.id))
+        : Promise.resolve([]),
+    ]).then(([parentIds, courseName, gradeName, studentNames, docenteIds]) => {
+      // Si no hay destinatarios en absoluto, no se envía nada.
+      if (!parentIds.length && !docenteIds.length) return;
 
       // Etiqueta legible del rol del emisor para mostrar al pie del mensaje.
       const roleLabel = req.user.role === 'auxiliar' ? 'Auxiliar' : req.user.role === 'docente' ? 'Docente' : req.user.role === 'director' ? 'Director' : req.user.role === 'secretaria' ? 'Secretaria' : 'Administrador del Sistema';
@@ -200,19 +217,23 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
 
       // Objeto de notificación estándar para push (título + cuerpo breve).
       const notification = { title: 'Nuevo comunicado', body: title };
-      // Datos adicionales que el service worker puede usar para enrutar la notificación.
-      const notifData = { type: 'communication' };
+      // Datos adicionales: `tab` indica a qué pestaña de /padre/comunicados navegar.
+      // Dirección (general/grado) → tab "comunicados"; curso/alumno/tarea → tab "avisos".
+      const isDirectionComm = type === 'general' || type === 'grado';
+      const notifData = { type: 'communication', tab: isDirectionComm ? 'comunicados' : 'avisos' };
 
       // Enviar Web Push solo si las claves VAPID están configuradas en el servidor.
       if (process.env.VAPID_PRIVATE_KEY) {
-        getWebSubscriptionsForUsers(parentIds)
+        const allWebIds = [...new Set([...parentIds, ...docenteIds])];
+        getWebSubscriptionsForUsers(allWebIds)
           .then(subs => sendWebPush(subs, notification, notifData))
           .catch(err => console.error('Push communication web:', err.message));
       }
 
       // Enviar notificación FCM (Android/iOS) solo si Firebase está configurado.
       if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        getTokensForUsers(parentIds)
+        const allFcmIds = [...new Set([...parentIds, ...docenteIds])];
+        getTokensForUsers(allFcmIds)
           .then(tokens => sendToTokens(tokens, notification, notifData))
           .catch(err => console.error('Push communication FCM:', err.message));
       }

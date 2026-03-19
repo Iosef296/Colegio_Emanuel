@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import AvanceAdjuntos from '../common/AvanceAdjuntos';
@@ -157,8 +158,12 @@ function SectionHeader({ title, count, open, onToggle }) {
 //   - "Comunicados": mensajes de Dirección (general/grado).
 //   - "Avisos": comunicados de curso/alumno + resumen de asistencia de la semana.
 export default function PadreComunicados() {
-  // Tab activo: 'comunicados' (mensajes de Dirección) o 'avisos' (cursos + asistencia).
-  const [tab, setTab] = useState('comunicados');
+  const [searchParams] = useSearchParams();
+  // Tab activo: inicializa desde ?tab= si viene de una notificación push.
+  const [tab, setTab] = useState(() => {
+    const t = searchParams.get('tab');
+    return t === 'avisos' || t === 'comunicados' ? t : 'comunicados';
+  });
 
   // Lista de todos los comunicados devueltos por la API para este padre.
   const [comms, setComms] = useState([]);

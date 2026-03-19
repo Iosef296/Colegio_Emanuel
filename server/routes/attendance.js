@@ -161,7 +161,7 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
 
     // Datos adicionales que viajan en el payload de la notificación push
     // para que la app pueda actualizar la UI sin necesidad de refrescar.
-    const notifData = { type: 'attendance', student_id: String(student_id) };
+    const notifData = { type: 'attendance', tab: 'avisos', student_id: String(student_id) };
 
     // No enviar notificación cuando se registra "falta de salida" porque
     // no tiene sentido alertar que el alumno no marcó salida.
@@ -249,7 +249,7 @@ router.post('/bulk', authorizeRoles('docente', 'admin', 'auxiliar'), async (req,
     Promise.all(records.map(async r => {
       const name = await getStudentName(r.student_id);
       const notification = buildNotification(name, r.status);
-      const notifData = { type: 'attendance', student_id: String(r.student_id) };
+      const notifData = { type: 'attendance', tab: 'avisos', student_id: String(r.student_id) };
 
       // Notificación FCM (app nativa) si Firebase está configurado.
       if (process.env.FIREBASE_SERVICE_ACCOUNT) {

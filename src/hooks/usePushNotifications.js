@@ -28,11 +28,11 @@ export function usePushNotifications(user) {
     // Si no hay usuario autenticado, salimos sin hacer nada.
     if (!user) return;
 
-    // Solo el rol 'padre' debe recibir notificaciones push.
-    // Para cualquier otro rol (docente, admin, auxiliar, etc.) eliminamos
-    // cualquier suscripción previa que pudiera existir en el navegador,
-    // de modo que no reciban notificaciones al cambiar de sesión.
-    if (user.role !== 'padre') {
+    // Solo reciben notificaciones los padres y los docentes.
+    // Para admin, director, secretaria y auxiliar eliminamos cualquier
+    // suscripción previa para que no reciban notificaciones innecesarias.
+    const receivesNotifs = user.role === 'padre' || user.role === 'docente';
+    if (!receivesNotifs) {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(reg =>
           reg.pushManager.getSubscription().then(sub => sub?.unsubscribe())
@@ -87,13 +87,26 @@ export function usePushNotifications(user) {
             await api.post('/push-tokens', { token, platform: 'android' });
           });
 
-          // Dispatch refresh event when push arrives (foreground or tapped from background)
-          // Cuando llega una notificación (en primer plano) o el usuario la toca
-          // (desde el cajón de notificaciones), disparamos el evento 'server-change'
-          // que el hook useAutoRefresh escucha para actualizar los datos en pantalla.
-          const refresh = () => window.dispatchEvent(new CustomEvent('server-change'));
-          PushNotifications.addListener('pushNotificationReceived', refresh);
-          PushNotifications.addListener('pushNotificationActionPerformed', refresh);
+          // Al llegar en primer plano: refrescar datos en pantalla.
+          PushNotifications.addListener('pushNotificationReceived', () => {
+            window.dispatchEvent(new CustomEvent('server-change'));
+          });
+
+          // Al tocar la notificación: navegar a la sección correcta según el rol.
+          PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+            window.dispatchEvent(new CustomEvent('server-change'));
+            const tab = notification?.data?.tab;
+            let target;
+            if (user.role === 'docente') {
+              target = '/docente/comunicados';
+            } else if (user.role === 'auxiliar') {
+              target = '/auxiliar/comunicados';
+            } else {
+              // padre (y cualquier otro)
+              target = tab ? `/padre/comunicados?tab=${tab}` : '/padre/comunicados';
+            }
+            window.location.href = target;
+          });
         } else {
           // ── Rama Web/PWA (navegador) ───────────────────────────────────────
 

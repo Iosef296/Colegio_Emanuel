@@ -8,7 +8,7 @@
 //  — Envolver cada vista protegida con el Layout (barra lateral + header).
 // ============================================================
 
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext'; // Contexto global con el usuario autenticado
 import Login from './components/common/Login';
 import Layout from './components/common/Layout';
@@ -50,7 +50,6 @@ import AuxiliarAsistencia from './components/auxiliar/AuxiliarAsistencia';
 // ---------------------------------------------------------------------------
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminUsuarios from './components/admin/AdminUsuarios';
-import AdminAlumnos from './components/admin/AdminAlumnos';
 import AdminCursos from './components/admin/AdminCursos';
 import AdminAsignaciones from './components/admin/AdminAsignaciones';
 import AdminGrados from './components/admin/AdminGrados';
@@ -78,6 +77,20 @@ function RoleRedirect() {
   if (user.role === 'director' || user.role === 'secretaria') return <Navigate to="/admin" replace />;
   // Para padre, docente y auxiliar la ruta base es su propio prefijo de rol
   return <Navigate to={`/${user.role}`} replace />;
+}
+
+// NotifRedirect — destino al tocar una notificación push.
+// Lee ?tab= y redirige a la sección de comunicados del rol correspondiente.
+function NotifRedirect() {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get('tab');
+  if (!user) return <Navigate to="/login" replace />;
+  const tabParam = tab ? `?tab=${tab}` : '';
+  if (user.role === 'padre') return <Navigate to={`/padre/comunicados${tabParam}`} replace />;
+  if (user.role === 'docente') return <Navigate to="/docente/comunicados" replace />;
+  if (user.role === 'auxiliar') return <Navigate to="/auxiliar/comunicados" replace />;
+  return <Navigate to="/admin/comunicados" replace />;
 }
 
 /**
@@ -184,7 +197,6 @@ export default function App() {
       {/* Gestión de grados y secciones con asignación de tutor y color */}
       <Route path="/admin/grados" element={<ProtectedRoute roles={['admin', 'director', 'secretaria']}><Layout><AdminGrados /></Layout></ProtectedRoute>} />
       {/* Gestión del padrón de alumnos */}
-      <Route path="/admin/alumnos" element={<ProtectedRoute roles={['admin', 'director', 'secretaria']}><Layout><AdminAlumnos /></Layout></ProtectedRoute>} />
       {/* Gestión de cursos del plan de estudios */}
       <Route path="/admin/cursos" element={<ProtectedRoute roles={['admin', 'director', 'secretaria']}><Layout><AdminCursos /></Layout></ProtectedRoute>} />
       {/* Asignación de docentes a cursos y grados */}
@@ -203,6 +215,7 @@ export default function App() {
       {/* ------------------------------------------------------------------ */}
       {/* FALLBACK — cualquier ruta no definida redirige según el rol         */}
       {/* ------------------------------------------------------------------ */}
+      <Route path="/notif" element={<NotifRedirect />} />
       <Route path="*" element={<RoleRedirect />} />
     </Routes>
   );

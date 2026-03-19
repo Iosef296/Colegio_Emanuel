@@ -17,12 +17,18 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const data = event.notification.data || {};
+  const tab = data.tab || '';
+  const targetPath = tab ? `/notif?tab=${tab}` : '/notif';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const client of list) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) return client.focus();
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetPath);
+          return client.focus();
+        }
       }
-      return clients.openWindow('/');
+      return clients.openWindow(targetPath);
     })
   );
 });

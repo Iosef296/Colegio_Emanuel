@@ -71,7 +71,8 @@ import AdminWhatsapp from './components/admin/AdminWhatsapp';
  * impidiendo que el usuario vuelva a "/" con el botón "atrás".
  */
 function RoleRedirect() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return <div className="loading">Cargando...</div>;
   if (!user) return <Navigate to="/login" replace />;
   // director y secretaria comparten la interfaz de administración
   if (user.role === 'director' || user.role === 'secretaria') return <Navigate to="/admin" replace />;

@@ -5,17 +5,15 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  // loading is always false — user is trusted from localStorage immediately.
-  // If token is expired, API calls will return 401 and client.js handles the redirect.
-  const loading = false;
+  const [user, setUser] = useState(null);
+  // loading=true mientras se verifica el token al arrancar.
+  // Así no se muestra ninguna página antes de confirmar la sesión.
+  const [loading, setLoading] = useState(true);
   usePushNotifications(user);
 
   // Pedir permiso de notificaciones al abrir la app (antes del login).
   // Se hace aquí porque el bridge de Capacitor ya está listo cuando React monta.
+  // Corre mientras loading=true, así el diálogo aparece antes de mostrar cualquier página.
   useEffect(() => {
     const isCapacitor = window.Capacitor?.isNativePlatform?.() === true;
     if (!isCapacitor) return;
@@ -26,17 +24,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token && user) {
-      // Background refresh — update user data without blocking rendering
+    const saved = localStorage.getItem('user');
+    if (token && saved) {
+      // Verificar token con el servidor antes de mostrar la app.
       api.get('/auth/me')
         .then(data => {
           setUser(data);
           localStorage.setItem('user', JSON.stringify(data));
         })
         .catch(() => {
-          // api client already handles 401 (clears token + redirects to /login)
-          // Don't clear on network/server errors — that would log out on bad wifi
-        });
+          // api client ya maneja el 401 (limpia token y redirige a /login)
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
 
     // Sync auth state across tabs via storage events

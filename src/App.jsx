@@ -9,7 +9,8 @@
 // ============================================================
 
 import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from './context/AuthContext'; // Contexto global con el usuario autenticado
+import { useAuth } from './context/AuthContext';
+import LoadingScreen from './components/common/LoadingScreen'; // Contexto global con el usuario autenticado
 import Login from './components/common/Login';
 import Layout from './components/common/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute'; // HOC que bloquea rutas sin autenticación
@@ -72,7 +73,7 @@ import AdminWhatsapp from './components/admin/AdminWhatsapp';
  */
 function RoleRedirect() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loading">Cargando...</div>;
+  if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   // director y secretaria comparten la interfaz de administración
   if (user.role === 'director' || user.role === 'secretaria') return <Navigate to="/admin" replace />;

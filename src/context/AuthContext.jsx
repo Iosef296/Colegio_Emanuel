@@ -14,6 +14,16 @@ export function AuthProvider({ children }) {
   const loading = false;
   usePushNotifications(user);
 
+  // Pedir permiso de notificaciones al abrir la app (antes del login).
+  // Se hace aquí porque el bridge de Capacitor ya está listo cuando React monta.
+  useEffect(() => {
+    const isCapacitor = window.Capacitor?.isNativePlatform?.() === true;
+    if (!isCapacitor) return;
+    import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+      PushNotifications.requestPermissions().catch(() => {});
+    });
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token && user) {
@@ -53,8 +63,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUser = (changes) => {
+    const updated = { ...user, ...changes };
+    setUser(updated);
+    localStorage.setItem('user', JSON.stringify(updated));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

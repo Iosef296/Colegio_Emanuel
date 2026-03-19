@@ -14,11 +14,6 @@ if ('serviceWorker' in navigator) {
 const isCapacitor = !!window.Capacitor?.isNativePlatform?.();
 
 if (isCapacitor) {
-  // Solicitar permiso de notificaciones al abrir la app, antes del login.
-  import('@capacitor/push-notifications').then(({ PushNotifications }) => {
-    PushNotifications.requestPermissions().catch(() => {});
-  });
-
   // In the Android APK (Capacitor), use the native back button API.
   // This intercepts the back gesture before the WebView handles it.
   import('@capacitor/app').then(({ App: CapApp }) => {

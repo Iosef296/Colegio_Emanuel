@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../common/Icon';
@@ -5,12 +6,37 @@ import Icon from '../common/Icon';
 export default function AuxiliarDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [lightbox, setLightbox] = useState(false);
+
+  const handleDownloadPhoto = async (e) => {
+    e.stopPropagation();
+    const proxyUrl = `https://colegio-emanuel-api.fly.dev/api/download?url=${encodeURIComponent(user.photo_url)}`;
+    const a = document.createElement('a');
+    a.href = proxyUrl;
+    a.download = 'foto-perfil.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   return (
     <div>
       <div className="page-header" style={{ paddingBottom: 50, borderRadius: '0 0 30px 30px' }}>
-        <p style={{ opacity: 0.7, fontSize: 13 }}>Panel Auxiliar</p>
-        <h1>{user.full_name}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="header-photo-mobile" onClick={() => setLightbox(true)} style={{ cursor: 'pointer' }}>
+              {user?.photo_url
+                ? <img src={user.photo_url} />
+                : <Icon name="user" color="white" size={28} />
+              }
+            </div>
+            <div>
+              <p style={{ opacity: 0.7, fontSize: 13 }}>Panel Auxiliar</p>
+              <h1>{user.full_name}</h1>
+            </div>
+          </div>
+          <img src="/logo.png" alt="Logo" className="mobile-only-logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+        </div>
       </div>
       <div className="content-area" style={{ marginTop: -20 }}>
         <div className="grid-2">
@@ -28,6 +54,19 @@ export default function AuxiliarDashboard() {
           ))}
         </div>
       </div>
+      {lightbox && (
+        <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16, gap: 16 }}>
+          {user?.photo_url
+            ? <img src={user.photo_url} alt="Foto" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 8 }} />
+            : <Icon name="user" color="white" size={100} />
+          }
+          {user?.photo_url && (
+            <button onClick={handleDownloadPhoto} style={{ background: 'white', color: '#1E3A5F', padding: '10px 24px', borderRadius: 8, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              Descargar foto
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

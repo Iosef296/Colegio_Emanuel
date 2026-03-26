@@ -14,6 +14,18 @@ export default function PadreDashboard() {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
+
+  const handleDownloadPhoto = async (e) => {
+    e.stopPropagation();
+    const proxyUrl = `https://colegio-emanuel-api.fly.dev/api/download?url=${encodeURIComponent(user.photo_url)}`;
+    const a = document.createElement('a');
+    a.href = proxyUrl;
+    a.download = 'foto-perfil.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   const load = useCallback((silent = false) => {
     api.get('/dashboard/padre').then(data => { setData(data); setLoading(false); }).catch(console.error);
@@ -41,11 +53,12 @@ export default function PadreDashboard() {
       <div className="page-header" style={{ paddingBottom: 60, borderRadius: '0 0 30px 30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {user?.photo_url && (
-              <div className="header-photo-mobile">
-                <img src={user.photo_url} />
-              </div>
-            )}
+            <div className="header-photo-mobile" onClick={() => setLightbox(true)} style={{ cursor: 'pointer' }}>
+              {user?.photo_url
+                ? <img src={user.photo_url} />
+                : <Icon name="user" color="white" size={28} />
+              }
+            </div>
             <div>
               <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
               <h1>{student?.name || user.full_name}</h1>
@@ -144,6 +157,20 @@ export default function PadreDashboard() {
             </p>
             <button onClick={() => setShowPayModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>Cerrar</button>
           </div>
+        </div>
+      )}
+
+      {lightbox && (
+        <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16, gap: 16 }}>
+          {user?.photo_url
+            ? <img src={user.photo_url} alt="Foto" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 8 }} />
+            : <Icon name="user" color="white" size={100} />
+          }
+          {user?.photo_url && (
+            <button onClick={handleDownloadPhoto} style={{ background: 'white', color: '#1E3A5F', padding: '10px 24px', borderRadius: 8, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              Descargar foto
+            </button>
+          )}
         </div>
       )}
 

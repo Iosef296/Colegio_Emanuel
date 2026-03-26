@@ -36,6 +36,19 @@ export default function DocenteDashboard() {
   // Controla si el modal del código QR personal está visible.
   const [showQr, setShowQr] = useState(false);
 
+  const [lightbox, setLightbox] = useState(false);
+
+  const handleDownloadPhoto = async (e) => {
+    e.stopPropagation();
+    const proxyUrl = `https://colegio-emanuel-api.fly.dev/api/download?url=${encodeURIComponent(user.photo_url)}`;
+    const a = document.createElement('a');
+    a.href = proxyUrl;
+    a.download = 'foto-perfil.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   // Función de carga del dashboard memorizada con useCallback para que la
   // referencia sea estable entre renders. Esto es necesario para que el efecto
   // y el hook useAutoRefresh no provoquen bucles infinitos.
@@ -75,12 +88,20 @@ export default function DocenteDashboard() {
           visualmente al borde inferior del header con el efecto de tarjeta flotante. */}
       <div className="page-header" style={{ paddingBottom: 50, borderRadius: '0 0 30px 30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
-            <h1>{user.full_name}</h1>
-            <p style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-              {data?.totalCourses || 0} cursos · {data?.totalStudents || 0} alumnos
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="header-photo-mobile" onClick={() => setLightbox(true)} style={{ cursor: 'pointer' }}>
+              {user?.photo_url
+                ? <img src={user.photo_url} />
+                : <Icon name="user" color="white" size={28} />
+              }
+            </div>
+            <div>
+              <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
+              <h1>{user.full_name}</h1>
+              <p style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+                {data?.totalCourses || 0} cursos · {data?.totalStudents || 0} alumnos
+              </p>
+            </div>
           </div>
           {/* Botón para abrir el modal del QR personal; solo se muestra cuando
               la imagen QR ya fue generada exitosamente. */}
@@ -151,6 +172,20 @@ export default function DocenteDashboard() {
           El fondo oscuro semitransparente actúa como overlay. Al tocarlo fuera
           de la tarjeta blanca, el modal se cierra (stopPropagation en la tarjeta
           evita que el click interior lo cierre). */}
+      {lightbox && (
+        <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16, gap: 16 }}>
+          {user?.photo_url
+            ? <img src={user.photo_url} alt="Foto" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 8 }} />
+            : <Icon name="user" color="white" size={100} />
+          }
+          {user?.photo_url && (
+            <button onClick={handleDownloadPhoto} style={{ background: 'white', color: '#1E3A5F', padding: '10px 24px', borderRadius: 8, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              Descargar foto
+            </button>
+          )}
+        </div>
+      )}
+
       {showQr && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setShowQr(false)}>
           <div style={{ background: 'white', borderRadius: 16, padding: 24, maxWidth: 300, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>

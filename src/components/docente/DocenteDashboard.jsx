@@ -87,13 +87,24 @@ export default function DocenteDashboard() {
           El padding bottom extra permite que las tarjetas de stats se superpongan
           visualmente al borde inferior del header con el efecto de tarjeta flotante. */}
       <div className="page-header" style={{ paddingBottom: 50, borderRadius: '0 0 30px 30px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="header-photo-mobile" onClick={() => setLightbox(true)} style={{ cursor: 'pointer' }}>
-              {user?.photo_url
-                ? <img src={user.photo_url} />
-                : <Icon name="user" color="white" size={28} />
-              }
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div className="header-photo-mobile" onClick={() => setLightbox(true)} style={{ cursor: 'pointer' }}>
+                {user?.photo_url
+                  ? <img src={user.photo_url} />
+                  : <Icon name="user" color="white" size={28} />
+                }
+              </div>
+              {qrDataUrl && (
+                <button
+                  onClick={() => setShowQr(true)}
+                  style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 11, fontWeight: 600 }}
+                >
+                  <Icon name="qr" color="white" size={14} />
+                  <span>QR</span>
+                </button>
+              )}
             </div>
             <div>
               <p style={{ opacity: 0.7, fontSize: 13 }}>Bienvenido</p>
@@ -103,17 +114,7 @@ export default function DocenteDashboard() {
               </p>
             </div>
           </div>
-          {/* Botón para abrir el modal del QR personal; solo se muestra cuando
-              la imagen QR ya fue generada exitosamente. */}
-          {qrDataUrl && (
-            <button
-              onClick={() => setShowQr(true)}
-              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 12 }}
-            >
-              <Icon name="qr" color="white" size={16} />
-              <span>QR</span>
-            </button>
-          )}
+          <img src="/logo.png" alt="Logo" className="mobile-only-logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
         </div>
       </div>
 

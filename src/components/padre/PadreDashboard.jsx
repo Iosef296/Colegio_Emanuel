@@ -62,8 +62,9 @@ export default function PadreDashboard() {
               </div>
               {qrDataUrl && (
                 <button
+                  className="qr-btn-mobile"
                   onClick={() => setShowQr(true)}
-                  style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: 'white', fontSize: 11, fontWeight: 600 }}
+                  style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', alignItems: 'center', gap: 4, color: 'white', fontSize: 11, fontWeight: 600 }}
                 >
                   <Icon name="qr" color="white" size={14} />
                   <span>QR</span>
@@ -80,7 +81,19 @@ export default function PadreDashboard() {
               )}
             </div>
           </div>
-          <img src="/logo.png" alt="Logo" className="mobile-only-logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {qrDataUrl && (
+              <button
+                className="qr-btn-desktop"
+                onClick={() => setShowQr(true)}
+                style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.3)', borderRadius: 16, width: 90, height: 90, cursor: 'pointer', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'white', fontWeight: 700, fontSize: 14 }}
+              >
+                <Icon name="qr" color="white" size={38} />
+                <span>QR</span>
+              </button>
+            )}
+            <img src="/logo.png" alt="Logo" className="mobile-only-logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+          </div>
         </div>
       </div>
 

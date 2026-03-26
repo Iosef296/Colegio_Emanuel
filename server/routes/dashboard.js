@@ -27,7 +27,7 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
       [student.id]
     );
 
-    // Overdue payments: due on 15th of following month
+    // Overdue payments: due on 25th of previous month (March → Feb 25, April → Mar 25)
     const [unpaidPayments] = await pool.query(
       'SELECT month, year, amount FROM payments WHERE student_id = ? AND paid = false',
       [student.id]
@@ -38,7 +38,7 @@ router.get('/padre', authorizeRoles('padre'), async (req, res) => {
     let earliestDueDate = null;
     for (const p of unpaidPayments) {
       const monthNum = MONTH_NUM[p.month];
-      const dueDate = new Date(Number(p.year), monthNum - 1, 5); // día 5 del mismo mes
+      const dueDate = new Date(Number(p.year), monthNum - 2, 25); // día 25 del mes anterior
       if (today > dueDate) {
         deudaTotal += Number(p.amount);
         deudaVencida++;

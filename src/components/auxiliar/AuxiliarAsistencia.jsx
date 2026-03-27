@@ -547,24 +547,60 @@ export default function AuxiliarAsistencia() {
           </div>
         </div>
 
-        {/* Pestañas de grado: filtran la lista de alumnos al grado seleccionado.
-            Al montar el componente se preselecciona el primer grado disponible. */}
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 12 }}>
-          {grades.map(g => (
-            <button
-              key={g.id}
-              onClick={() => setSelectedGrade(g.id)}
-              style={{
-                flexShrink: 0, padding: '7px 16px', borderRadius: 20, border: 'none',
-                cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-                background: selectedGrade === g.id ? 'var(--primary)' : 'var(--bg)',
-                color: selectedGrade === g.id ? 'white' : 'var(--text-secondary)',
-              }}
-            >
-              {g.name}{g.section ? ` ${g.section}` : ''}
-            </button>
-          ))}
-        </div>
+        {/* Pestañas de grado agrupadas por nivel (Inicial / Primaria / Secundaria / Otros).
+            Cada nivel muestra una etiqueta separadora y sus grados como pestañas. */}
+        {(() => {
+          const getLevel = (name = '') => {
+            const n = name.toLowerCase();
+            if (n.includes('inicial'))    return 'Inicial';
+            if (n.includes('primaria'))   return 'Primaria';
+            if (n.includes('secundaria')) return 'Secundaria';
+            return 'Otros';
+          };
+          const LEVEL_ORDER = ['Inicial', 'Primaria', 'Secundaria', 'Otros'];
+          const LEVEL_COLOR = {
+            Inicial:    { color: '#92400E', bg: '#FEF3C7', border: '#FCD34D' },
+            Primaria:   { color: '#1E40AF', bg: '#DBEAFE', border: '#93C5FD' },
+            Secundaria: { color: '#065F46', bg: '#D1FAE5', border: '#6EE7B7' },
+            Otros:      { color: '#5B21B6', bg: '#EDE9FE', border: '#C4B5FD' },
+          };
+          const grouped = LEVEL_ORDER
+            .map(lvl => ({ lvl, list: grades.filter(g => getLevel(g.name) === lvl) }))
+            .filter(({ list }) => list.length > 0);
+
+          return (
+            <div style={{ marginBottom: 12 }}>
+              {grouped.map(({ lvl, list }) => {
+                const lc = LEVEL_COLOR[lvl];
+                return (
+                  <div key={lvl} style={{ marginBottom: 8 }}>
+                    {/* Etiqueta del nivel */}
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20, display: 'inline-block', marginBottom: 6 }}>
+                      {lvl.toUpperCase()}
+                    </span>
+                    {/* Pestañas de grados de este nivel */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {list.map(g => (
+                        <button
+                          key={g.id}
+                          onClick={() => setSelectedGrade(g.id)}
+                          style={{
+                            padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${selectedGrade === g.id ? 'transparent' : lc.border}`,
+                            cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+                            background: selectedGrade === g.id ? 'var(--primary)' : 'white',
+                            color: selectedGrade === g.id ? 'white' : lc.color,
+                          }}
+                        >
+                          {g.name}{g.section ? ` ${g.section}` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Contadores de resumen del grado seleccionado para el contexto actual.
             En modo "entrada" muestra: Temprano / Tardanzas / Faltas / Total.

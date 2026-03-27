@@ -4,7 +4,7 @@
  * Gestiona el ciclo de vida completo de la sesión:
  *   - Autenticación persistida en PostgreSQL (sin archivos en disco).
  *   - Generación de QR en base64 para mostrar en el panel admin.
- *   - Cola de mensajes con pausa de 3 s entre envíos para evitar bloqueos de cuenta.
+ *   - Cola de mensajes con pausa aleatoria de 5–10 s entre envíos para evitar bloqueos de cuenta.
  *   - Reconexión automática exponencial tras desconexiones inesperadas.
  *   - Limpieza de credenciales cuando el dispositivo cierra sesión remotamente.
  */
@@ -45,7 +45,7 @@ let processingQueue = false; // Semáforo para evitar que processQueue se ejecut
 /**
  * processQueue
  * Consume la cola de mensajes pendientes de forma secuencial.
- * Espera 3 segundos entre cada mensaje para respetar los límites de WhatsApp.
+ * Espera entre 5 y 10 segundos (aleatorio) entre cada mensaje para respetar los límites de WhatsApp.
  * Si el socket no está conectado en el momento del envío, rechaza la promesa
  * del mensaje correspondiente con un error descriptivo.
  */
@@ -67,9 +67,13 @@ async function processQueue() {
       // Propagar el error a quien llamó sendWhatsApp() para manejo en el sitio de llamada.
       reject(err);
     }
-    // Pausa de 3 s entre mensajes para evitar rate-limiting de WhatsApp.
+    // Pausa aleatoria entre 5 y 10 s entre mensajes para evitar rate-limiting de WhatsApp.
+    // El tiempo variable simula comportamiento humano y reduce el riesgo de detección como spam.
     // Solo se espera si aún hay más mensajes en cola.
-    if (queue.length > 0) await new Promise(r => setTimeout(r, 3000));
+    if (queue.length > 0) {
+      const delay = 5000 + Math.floor(Math.random() * 5000); // 5–10 s
+      await new Promise(r => setTimeout(r, delay));
+    }
   }
 
   processingQueue = false;

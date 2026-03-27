@@ -243,15 +243,33 @@ router.post('/', authorizeRoles('docente', 'admin', 'auxiliar'), async (req, res
       //   *texto* → negrita, _texto_ → cursiva.
       const waMsg = `📢 *Colegio Emanuel*\n\n*${title}*${body ? '\n\n' + body : ''}${context}\n\n_Enviado por: ${sender}_`;
 
-      // Consultar los teléfonos de los padres destinatarios y enviar un mensaje
-      // a cada uno de forma individual. Los errores se capturan por mensaje para
-      // no interrumpir el envío al resto de la lista.
+      // Ventana de distribución según el tipo de comunicado para evitar ráfagas:
+      //   general  → 30 min (muchos destinatarios, mayor riesgo de ban)
+      //   grado    → 10 min
+      //   curso    → 10 min
+      //   alumno   → inmediato (un solo padre, sin riesgo)
+      const waWindowMs = type === 'general' ? 30 * 60 * 1000
+                       : (type === 'grado' || type === 'curso') ? 10 * 60 * 1000
+                       : 0;
+
+      // Consultar los teléfonos de los padres destinatarios y distribuir los envíos
+      // uniformemente dentro de la ventana con jitter de ±15 s para evitar patrones exactos.
       pool._pool.query(
         `SELECT phone FROM users WHERE id = ANY($1) AND phone IS NOT NULL AND phone <> ''`,
         [parentIds]
-      ).then(r => r.rows.forEach(row =>
-        sendWhatsApp(row.phone, waMsg).catch(e => console.error('WA comunicado:', e.message))
-      )).catch(() => {});
+      ).then(r => {
+        const phones = r.rows.map(row => row.phone);
+        if (!phones.length) return;
+        const spacing = phones.length > 1 && waWindowMs > 0 ? waWindowMs / (phones.length - 1) : 0;
+        phones.forEach((phone, i) => {
+          const jitter = (Math.random() - 0.5) * 30000; // ±15 s
+          const delay = Math.max(0, Math.round(i * spacing + jitter));
+          setTimeout(
+            () => sendWhatsApp(phone, waMsg).catch(e => console.error('WA comunicado:', e.message)),
+            delay
+          );
+        });
+      }).catch(() => {});
     }).catch(err => console.error('Notif communication error:', err.message));
   } catch (err) {
     console.error(err);

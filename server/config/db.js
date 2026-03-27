@@ -5,9 +5,9 @@ dotenv.config();
 const { Pool } = pg;
 
 const baseConfig = {
-  max: 10,
-  idleTimeoutMillis: 30000,       // close idle connections after 30s (good for auto-stop)
-  connectionTimeoutMillis: 5000,  // fail fast if DB unreachable after cold start
+  max: 2,                         // pocas conexiones → Neon suspende el cómputo más rápido
+  idleTimeoutMillis: 5000,        // cierra conexiones inactivas en 5 s para liberar cómputo
+  connectionTimeoutMillis: 10000, // más margen para el cold start de Neon tras auto-suspend
 };
 
 const pgPool = new Pool(

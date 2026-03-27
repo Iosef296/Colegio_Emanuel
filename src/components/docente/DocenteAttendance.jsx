@@ -185,6 +185,30 @@ export default function DocenteAttendance() {
     justificado: { label: 'Justificado', color: 'var(--primary)', bg: 'var(--primary-light)' },
   };
 
+  // Detecta el nivel escolar a partir del nombre del grado.
+  const getLevel = (gradeName = '') => {
+    const n = gradeName.toLowerCase();
+    if (n.includes('inicial')) return 'Inicial';
+    if (n.includes('primaria')) return 'Primaria';
+    if (n.includes('secundaria')) return 'Secundaria';
+    return 'Otros';
+  };
+
+  const LEVEL_ORDER = ['Inicial', 'Primaria', 'Secundaria', 'Otros'];
+  const LEVEL_COLOR = {
+    Inicial:    { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' },
+    Primaria:   { bg: '#DBEAFE', color: '#1E40AF', border: '#93C5FD' },
+    Secundaria: { bg: '#D1FAE5', color: '#065F46', border: '#6EE7B7' },
+    Otros:      { bg: '#EDE9FE', color: '#5B21B6', border: '#C4B5FD' },
+  };
+
+  // Agrupa los alumnos por nivel manteniendo el orden definido en LEVEL_ORDER.
+  const grouped = LEVEL_ORDER.reduce((acc, lvl) => {
+    const list = students.filter(s => getLevel(s.grade_name) === lvl);
+    if (list.length > 0) acc.push({ level: lvl, students: list });
+    return acc;
+  }, []);
+
   if (loading) return <div className="loading">Cargando...</div>;
 
   return (
@@ -221,26 +245,42 @@ export default function DocenteAttendance() {
           </div>
         )}
 
-        {students.map(s => {
-          const status = records[s.id] || 'temprano';
-          const info = statusInfo[status];
+        {grouped.map(({ level, students: lvlStudents }) => {
+          const lc = LEVEL_COLOR[level];
           return (
-            <div key={s.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="user" color="var(--text-muted)" size={18} />
-                </div>
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.grade_name}</p>
-                </div>
+            <div key={level}>
+              {/* Separador de nivel */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, marginTop: 6 }}>
+                <div style={{ flex: 1, height: 1, background: lc.border }} />
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '3px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                  {level.toUpperCase()} · {lvlStudents.length} alumno{lvlStudents.length !== 1 ? 's' : ''}
+                </span>
+                <div style={{ flex: 1, height: 1, background: lc.border }} />
               </div>
-              <button
-                onClick={() => toggleStatus(s.id)}
-                style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              >
-                {info.label}
-              </button>
+
+              {lvlStudents.map(s => {
+                const status = records[s.id] || 'temprano';
+                const info = statusInfo[status];
+                return (
+                  <div key={s.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon name="user" color="var(--text-muted)" size={18} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.grade_name}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleStatus(s.id)}
+                      style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {info.label}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           );
         })}

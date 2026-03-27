@@ -1,13 +1,15 @@
 /**
  * utils/paymentReminder.js
  * Job automático que envía recordatorios de pago de mensualidades via WhatsApp.
- * Se ejecuta diariamente a las 8:00 AM hora de Lima (America/Lima, UTC-5).
+ * Se ejecuta diariamente a las 2:00 PM hora de Lima (America/Lima, UTC-5).
  *
  * Lógica de negocio:
  *   - La fecha de vencimiento de cada mensualidad es el día 25 del mes ANTERIOR
  *     al mes de la mensualidad (ej. la mensualidad de Abril vence el 25 de Marzo).
  *   - Se envía recordatorio entre 5 días antes del vencimiento y el día de vencimiento.
  *   - Los pagos ya efectuados (paid = true) o sin teléfono registrado son ignorados.
+ *   - Los mensajes se distribuyen uniformemente entre las 2:00 PM y las 6:30 PM
+ *     con jitter aleatorio para evitar patrones robóticos y riesgo de baneo.
  */
 
 import pool from '../config/db.js';
@@ -17,6 +19,9 @@ import { sendWhatsApp } from './whatsapp.js';
 // almacenado en la DB a un índice numérico (0 = Enero, 11 = Diciembre).
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// Ventana de envío: 4.5 horas (14:00–18:30 Lima) en milisegundos.
+const SEND_WINDOW_MS = 4.5 * 60 * 60 * 1000;
 
 /**
  * getDueDate(month, year)
@@ -63,11 +68,12 @@ function limaToday() {
 /**
  * sendPaymentReminders()
  * Función principal del job: consulta todos los pagos pendientes con teléfono
- * disponible, calcula cuántos días faltan para el vencimiento de cada uno
- * y envía un mensaje de WhatsApp si el vencimiento está entre 0 y 5 días.
+ * disponible, filtra los que vencen en los próximos 5 días y programa cada
+ * mensaje en un momento distinto dentro de la ventana 14:00–18:30 Lima.
  *
- * El mensaje varía según si vence hoy (urgente ⚠️) o en días futuros (recordatorio 🔔).
- * Los errores por alumno se capturan individualmente para no interrumpir el resto.
+ * La distribución gradual evita ráfagas que puedan activar el sistema
+ * anti-spam de WhatsApp. Cada mensaje lleva además un jitter de ±2 minutos
+ * para que los intervalos no sean exactamente uniformes.
  */
 export async function sendPaymentReminders() {
   try {
@@ -88,45 +94,53 @@ export async function sendPaymentReminders() {
         AND u.phone <> ''
     `);
 
-    let sent = 0; // Contador de mensajes enviados exitosamente en esta ejecución.
+    // Filtrar y preparar solo los pagos que necesitan recordatorio hoy.
+    const toSend = [];
 
     for (const p of payments) {
-      // Calcular la fecha de vencimiento del pago actual.
       const due = getDueDate(p.month, Number(p.year));
-      if (!due) continue; // Saltar si el mes en la DB es inválido o no reconocido.
+      if (!due) continue;
 
       // Diferencia en días entre el vencimiento y hoy.
-      // 86400000 ms = 1 día; Math.round maneja pequeñas diferencias por cambio de horario.
       const diffDays = Math.round((due - today) / 86400000);
 
-      // Solo enviar recordatorio si el vencimiento es hoy o en los próximos 5 días.
-      // Si ya venció (diffDays < 0) o vence en más de 5 días, no molestar al padre.
+      // Solo recordar si el vencimiento es hoy o en los próximos 5 días.
       if (diffDays < 0 || diffDays > 5) continue;
 
       const studentName = `${p.first_name} ${p.last_name}`;
-
-      // Formatear la fecha de vencimiento en español peruano (ej. "25 de febrero de 2026").
       const dueStr = due.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
-
-      // Mostrar el monto formateado o "pendiente" si no está definido en la DB.
       const amount = p.amount ? `S/ ${Number(p.amount).toFixed(2)}` : 'pendiente';
 
-      // Componer el mensaje apropiado según la urgencia:
-      //   - diffDays === 0 → Vence HOY: mensaje de urgencia con ⚠️.
-      //   - diffDays > 0  → Faltan N días: recordatorio con 🔔 y fecha exacta.
       const msg = diffDays === 0
         ? `⚠️ *Colegio Emanuel*\n\nLa mensualidad de *${studentName}* (${p.month}) vence *HOY*.\n\nMonto: ${amount}\n\nPor favor realice el pago a la brevedad.`
         : `🔔 *Colegio Emanuel*\n\nRecordatorio: la mensualidad de *${studentName}* (${p.month}) vence el *${dueStr}*, en *${diffDays} día${diffDays > 1 ? 's' : ''}*.\n\nMonto: ${amount}\n\nEvite inconvenientes pagando a tiempo.`;
 
-      // Enviar el mensaje por WhatsApp; los errores individuales se registran sin detener el loop.
-      await sendWhatsApp(p.phone, msg).catch(err =>
-        console.error(`Reminder WA error (${p.phone}):`, err.message)
-      );
-      sent++;
+      toSend.push({ phone: p.phone, msg });
     }
 
-    // Registrar en consola cuántos recordatorios se enviaron (solo si fue al menos uno).
-    if (sent > 0) console.log(`Payment reminders: ${sent} enviados`);
+    if (toSend.length === 0) {
+      console.log('Payment reminders: sin pagos pendientes hoy');
+      return;
+    }
+
+    // Distribuir los mensajes uniformemente dentro de la ventana de 4.5 horas.
+    // Con N destinatarios: el primero sale al inicio, el último al final de la ventana.
+    // Cada uno lleva un jitter de ±2 minutos para que no sean intervalos exactos.
+    const spacing = toSend.length > 1 ? SEND_WINDOW_MS / (toSend.length - 1) : 0;
+    const JITTER_MS = 2 * 60 * 1000; // ±2 minutos
+
+    toSend.forEach(({ phone, msg }, i) => {
+      const jitter = (Math.random() - 0.5) * 2 * JITTER_MS;
+      const delay = Math.max(0, Math.round(i * spacing + jitter));
+      setTimeout(
+        () => sendWhatsApp(phone, msg).catch(err =>
+          console.error(`Reminder WA error (${phone}):`, err.message)
+        ),
+        delay
+      );
+    });
+
+    console.log(`Payment reminders: ${toSend.length} programados gradualmente entre 14:00 y 18:30`);
   } catch (err) {
     console.error('Payment reminder error:', err.message);
   }
@@ -135,41 +149,36 @@ export async function sendPaymentReminders() {
 /**
  * startPaymentReminderJob()
  * Registra el job recurrente que ejecuta sendPaymentReminders() todos los días
- * a las 8:00 AM hora de Lima.
+ * a las 2:00 PM hora de Lima. Al dispararse, los mensajes se distribuyen
+ * automáticamente a lo largo de la ventana 14:00–18:30.
  *
  * No usa cron para evitar dependencias adicionales; en su lugar implementa
  * un setTimeout auto-renovable (scheduleNext se llama a sí misma tras cada ejecución).
- * Esto garantiza que el job siempre se dispare a las 8:00 AM incluso si el servidor
- * estuvo caído parte de la noche, ya que recalcula el delay en cada ciclo.
  */
 export function startPaymentReminderJob() {
   /**
    * scheduleNext()
-   * Calcula los milisegundos hasta el próximo disparo (8:00 AM Lima) y programa
-   * un setTimeout. Si las 8:00 AM de hoy ya pasó, apunta al día siguiente.
+   * Calcula los milisegundos hasta las próximas 2:00 PM Lima y programa
+   * un setTimeout. Si las 2:00 PM de hoy ya pasó, apunta al día siguiente.
    */
   function scheduleNext() {
-    // Obtener la hora actual en Lima para calcular cuánto falta para las 8:00 AM.
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
     const next = new Date(now);
 
-    // Fijar la próxima ejecución a las 8:00:00.000 del día actual en Lima.
-    next.setHours(8, 0, 0, 0);
+    // Fijar la próxima ejecución a las 14:00:00.000 del día actual en Lima.
+    next.setHours(14, 0, 0, 0);
 
-    // Si ya pasaron las 8:00 AM de hoy, programar para las 8:00 AM de mañana.
+    // Si ya pasaron las 2:00 PM de hoy, programar para las 2:00 PM de mañana.
     if (next <= now) next.setDate(next.getDate() + 1);
 
-    // Milisegundos de espera hasta el próximo disparo.
     const ms = next - now;
-    console.log(`Payment reminder: próximo envío en ${Math.round(ms / 60000)} min`);
+    console.log(`Payment reminder: próximo disparo en ${Math.round(ms / 60000)} min (14:00 Lima)`);
 
     setTimeout(async () => {
-      // Ejecutar los recordatorios y luego volver a programar el siguiente disparo.
       await sendPaymentReminders();
       scheduleNext(); // Auto-renovar el job para el siguiente día.
     }, ms);
   }
 
-  // Arrancar el ciclo de programación al inicializar el servidor.
   scheduleNext();
 }

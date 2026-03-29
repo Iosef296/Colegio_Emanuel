@@ -19,7 +19,7 @@ function makePool(connectionString) {
   });
 }
 
-const primaryPool = process.env.DATABASE_URL
+const poolA = process.env.DATABASE_URL
   ? makePool(process.env.DATABASE_URL)
   : new Pool({
       ...baseConfig,
@@ -30,7 +30,14 @@ const primaryPool = process.env.DATABASE_URL
       port: parseInt(process.env.DB_PORT || '5432'),
     });
 
-const secondaryPool = makePool(process.env.DATABASE_URL_SECONDARY);
+const poolB = makePool(process.env.DATABASE_URL_SECONDARY);
+
+// SWAP_DB_ROLES=true → Supabase (DATABASE_URL_SECONDARY) es primary, Neon es secondary
+const swap = process.env.SWAP_DB_ROLES === 'true';
+const primaryPool = swap ? poolB : poolA;
+const secondaryPool = swap ? poolA : poolB;
+
+console.log(`[DB] Primary: ${swap ? 'Supabase' : 'Neon'} | Secondary: ${swap ? 'Neon' : 'Supabase'}`);
 
 // --- Failover state ---
 let primaryOk = true;

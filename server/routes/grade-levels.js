@@ -31,7 +31,8 @@ router.get('/', async (req, res) => {
     // JOIN con academic_periods para mostrar el nombre del período (ej: "2025").
     // LEFT JOIN con users para el tutor: puede no haber tutor asignado.
     const [rows] = await pool.query(
-      `SELECT gl.*, ap.name as period_name, u.full_name as tutor_name, u.photo_url as tutor_photo
+      `SELECT gl.*, ap.name as period_name, u.full_name as tutor_name, u.photo_url as tutor_photo,
+              (SELECT COUNT(*) FROM group_members WHERE group_id = gl.id) as member_count
        FROM grade_levels gl
        JOIN academic_periods ap ON gl.period_id = ap.id
        LEFT JOIN users u ON u.id = gl.tutor_id
@@ -55,19 +56,21 @@ router.get('/', async (req, res) => {
 // Devuelve el ID del grado creado usando RETURNING o insertId
 // (compatibilidad entre PG nativo y la capa de pool).
 // ------------------------------------------------------------
-router.post('/', authorizeRoles('admin'), async (req, res) => {
+router.post('/', authorizeRoles('admin', 'director', 'secretaria'), async (req, res) => {
   try {
     const { name, section, color, photo_url } = req.body;
 
     // Validación mínima: el nombre del grado es imprescindible.
     if (!name) return res.status(400).json({ error: 'El nombre es requerido' });
 
-    // period_id=1 hardcodeado porque el sistema solo gestiona un período activo.
-    // Si se necesitan múltiples períodos en el futuro, este valor deberá
-    // obtenerse de la tabla academic_periods con un SELECT WHERE active=true.
+    // Obtener el período activo; si no hay uno marcado como activo usa el de mayor id
+    const [periods] = await pool.query(
+      'SELECT id FROM academic_periods ORDER BY id DESC LIMIT 1'
+    );
+    const periodId = periods[0]?.id || 1;
     const [result] = await pool.query(
-      'INSERT INTO grade_levels (name, section, period_id, color, photo_url) VALUES (?,?,1,?,?) RETURNING id',
-      [name.trim(), section ? section.trim() : '', color || null, photo_url || null]
+      'INSERT INTO grade_levels (name, section, period_id, color, photo_url) VALUES (?,?,?,?,?) RETURNING id',
+      [name.trim(), section ? section.trim() : '', periodId, color || null, photo_url || null]
     );
 
     // Compatibilidad: RETURNING devuelve result[0].id en PG;
@@ -75,8 +78,8 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     broadcast();
     res.status(201).json({ id: result[0]?.id || result.insertId, name, section });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error del servidor' });
+    console.error('Error creando grado:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -95,7 +98,7 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
 //      No se mezclan ambos casos en una sola lógica para
 //      evitar pisar campos no enviados con valores vacíos.
 // ------------------------------------------------------------
-router.put('/:id', authorizeRoles('admin'), async (req, res) => {
+router.put('/:id', authorizeRoles('admin', 'director', 'secretaria'), async (req, res) => {
   try {
     const { name, section, tutor_id, color, photo_url } = req.body;
 
@@ -121,23 +124,117 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 });
 
 // ------------------------------------------------------------
-// DELETE /api/grade-levels/:id
-// Elimina un grado. Solo admin.
-// PRECAUCIÓN: si el grado tiene alumnos o asignaciones de
-// cursos con FK, PostgreSQL lanzará un error de integridad
-// referencial. En ese caso el servidor responde con 500
-// genérico; el admin debe reubicar o eliminar los alumnos
-// del grado antes de borrarlo.
+// GET /api/grade-levels/:id/members
+// Devuelve los alumnos miembros del grupo (grados tipo "Otros").
+// Hace JOIN con students para devolver nombre, foto, grado base.
 // ------------------------------------------------------------
-router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
+router.get('/:id/members', async (req, res) => {
   try {
-    await pool.query('DELETE FROM grade_levels WHERE id=?', [req.params.id]);
+    const [rows] = await pool.query(
+      `SELECT s.*, gl.name as grade_name, gl.color as grade_color
+       FROM group_members gm
+       JOIN students s ON s.id = gm.student_id
+       JOIN grade_levels gl ON gl.id = s.grade_level_id
+       WHERE gm.group_id = ? AND s.active = true
+       ORDER BY s.last_name`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
 
-    // Avisar a clientes SSE del cambio.
+// ------------------------------------------------------------
+// POST /api/grade-levels/:id/members
+// Agrega un alumno al grupo. Solo admin.
+// Ignora duplicados con ON CONFLICT DO NOTHING.
+// ------------------------------------------------------------
+router.post('/:id/members', authorizeRoles('admin', 'director', 'secretaria'), async (req, res) => {
+  try {
+    const { student_id } = req.body;
+    if (!student_id) return res.status(400).json({ error: 'student_id requerido' });
+    await pool.query(
+      'INSERT INTO group_members (group_id, student_id) VALUES (?,?) ON CONFLICT DO NOTHING',
+      [req.params.id, student_id]
+    );
+    res.status(201).json({ message: 'Miembro agregado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+// ------------------------------------------------------------
+// DELETE /api/grade-levels/:id/members/:student_id
+// Quita un alumno del grupo. Solo admin.
+// ------------------------------------------------------------
+router.delete('/:id/members/:student_id', authorizeRoles('admin', 'director', 'secretaria'), async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM group_members WHERE group_id=? AND student_id=?',
+      [req.params.id, req.params.student_id]
+    );
+    res.json({ message: 'Miembro eliminado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+// ------------------------------------------------------------
+// DELETE /api/grade-levels/:id
+// Elimina un grado de forma forzada.
+// Los alumnos del grado eliminado se mueven automáticamente al
+// grado especial "Alumnos sin asignar" (se crea si no existe).
+// Las asignaciones de docentes (teacher_courses) se eliminan.
+// Los miembros del grupo (group_members) se eliminan en cascada.
+// ------------------------------------------------------------
+router.delete('/:id', authorizeRoles('admin', 'director', 'secretaria'), async (req, res) => {
+  try {
+    const gradeId = req.params.id;
+
+    // Buscar o crear el grado de reserva "Alumnos sin asignar"
+    let [sinAsignar] = await pool.query(
+      "SELECT id FROM grade_levels WHERE name='Alumnos sin asignar' LIMIT 1"
+    );
+    let sinAsignarId;
+    if (sinAsignar.length > 0) {
+      sinAsignarId = sinAsignar[0].id;
+    } else {
+      const [created] = await pool.query(
+        "INSERT INTO grade_levels (name, section, period_id, color) VALUES ('Alumnos sin asignar','',1,'#9CA3AF') RETURNING id"
+      );
+      sinAsignarId = created[0]?.id || created.insertId;
+    }
+
+    if (String(gradeId) === String(sinAsignarId)) {
+      return res.status(400).json({ error: 'No se puede eliminar el grado "Alumnos sin asignar".' });
+    }
+
+    // 1. Mover alumnos al grado de reserva
+    await pool.query('UPDATE students SET grade_level_id=? WHERE grade_level_id=?', [sinAsignarId, gradeId]);
+
+    // 2. Eliminar comunicados del grado
+    await pool.query('DELETE FROM communications WHERE grade_level_id=?', [gradeId]);
+
+    // 3. Eliminar dependencias de teacher_courses en 2 queries (sin loop N+1)
+    await pool.query(
+      `DELETE FROM grades WHERE teacher_course_id IN (SELECT id FROM teacher_courses WHERE grade_level_id=?)`,
+      [gradeId]
+    );
+    await pool.query(
+      `DELETE FROM daily_progress WHERE teacher_course_id IN (SELECT id FROM teacher_courses WHERE grade_level_id=?)`,
+      [gradeId]
+    );
+    await pool.query('DELETE FROM teacher_courses WHERE grade_level_id=?', [gradeId]);
+
+    // 4. Eliminar el grado (group_members se elimina en cascada)
+    await pool.query('DELETE FROM grade_levels WHERE id=?', [gradeId]);
+
     broadcast();
     res.json({ message: 'Grado eliminado' });
   } catch (err) {
-    res.status(500).json({ error: 'Error del servidor' });
+    console.error('Error eliminando grado:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

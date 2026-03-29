@@ -9,6 +9,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import bcrypt from 'bcryptjs'; // Para hashear contraseñas de usuarios semilla
+import { rateLimit } from 'express-rate-limit';
 import dotenv from 'dotenv';
 dotenv.config(); // Carga variables de entorno desde el archivo .env
 
@@ -57,7 +58,17 @@ app.use(cors({
   origin: ['https://colegio-emanuel.pages.dev', 'https://colegioemanuel.es', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // Cachea el preflight 24h — evita OPTIONS repetidos
 }));
+
+// Rate limiting en login: máx 10 intentos cada 15 minutos por IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera 15 minutos.' },
+});
 
 // Parsea el cuerpo de las peticiones como JSON; límite de 1 MB para evitar payloads excesivos
 app.use(express.json({ limit: '1mb' }));
@@ -65,6 +76,7 @@ app.use(express.json({ limit: '1mb' }));
 // ---------------------------------------------------------------------------
 // Registro de rutas — cada módulo maneja su propio prefijo bajo /api
 // ---------------------------------------------------------------------------
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);                         // Login / registro / refresh token
 app.use('/api/users', userRoutes);                        // CRUD de usuarios (docentes, padres, etc.)
 app.use('/api/students', studentRoutes);                  // CRUD de alumnos
@@ -79,6 +91,25 @@ app.use('/api/dashboard', dashboardRoutes);               // Resúmenes del pane
 app.use('/api/grade-levels', gradeLevelRoutes);           // Grados y secciones
 app.use('/api/events', eventsRoutes);                     // Eventos del calendario escolar
 app.use('/api/upload', uploadRoutes);                     // Subida de imágenes a Cloudflare R2
+
+// Proxy de descarga: evita CORS al descargar imágenes desde R2
+app.get('/api/download', async (req, res) => {
+  const { url } = req.query;
+  if (!url || !url.startsWith(process.env.R2_PUBLIC_URL)) {
+    return res.status(400).json({ error: 'URL no permitida' });
+  }
+  try {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="foto.${ext}"`);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    res.status(500).json({ error: 'Error al descargar' });
+  }
+});
 app.use('/api/push-tokens', pushTokenRoutes);             // Tokens para notificaciones push (FCM/Web Push)
 app.use('/api/settings', settingsRoutes);                 // Configuración global de la aplicación
 app.use('/api/whatsapp', whatsappRoutes);                 // Integración con WhatsApp (Baileys)
@@ -306,6 +337,10 @@ pool._pool.query(`
   CREATE INDEX IF NOT EXISTS idx_daily_progress_teacher_course ON daily_progress(teacher_course_id);
   CREATE INDEX IF NOT EXISTS idx_teacher_courses_teacher ON teacher_courses(teacher_id);
   CREATE INDEX IF NOT EXISTS idx_teacher_courses_grade_level ON teacher_courses(grade_level_id);
+  CREATE INDEX IF NOT EXISTS idx_communications_type ON communications(type);
+  CREATE INDEX IF NOT EXISTS idx_communications_created ON communications(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_grades_student_tc ON grades(student_id, teacher_course_id);
+  CREATE INDEX IF NOT EXISTS idx_attendance_date_student ON attendance(date, student_id);
 `).then(() => console.log('DB: indexes OK'))
   .catch(err => console.error('DB index error:', err.message));
 
@@ -344,6 +379,21 @@ pool._pool.query(`
   END $$
 `).then(() => console.log('DB: turno+tipo migration OK'))
   .catch(err => console.error('DB turno migration error:', err.message));
+
+// Tabla de miembros de grupos para grados de tipo "Otros" (círculos de estudio)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS group_members (
+    group_id INTEGER REFERENCES grade_levels(id) ON DELETE CASCADE,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    PRIMARY KEY (group_id, student_id)
+  )
+`).then(() => console.log('DB: group_members OK'))
+  .catch(err => console.error('DB migration error:', err.message));
+
+// Amplía el campo name de grade_levels de VARCHAR(30) a VARCHAR(100)
+pool.query(`ALTER TABLE grade_levels ALTER COLUMN name TYPE VARCHAR(100)`)
+  .then(() => console.log('DB: grade_levels.name VARCHAR(100) OK'))
+  .catch(err => console.error('DB grade_levels.name migration error:', err.message));
 
 // ===========================================================================
 // LIMPIEZA AUTOMÁTICA DE REGISTROS ANTIGUOS

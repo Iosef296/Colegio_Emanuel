@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import pool from '../config/db.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 import { sendWhatsApp } from '../utils/whatsapp.js';
@@ -133,9 +134,9 @@ router.post('/', authorizeRoles('admin'), async (req, res) => {
     const [existing] = await pool.query('SELECT COUNT(*) as c FROM users WHERE username LIKE ? AND active = true', [`${username}%`]);
     if (existing[0].c > 0) username = `${username}${Number(existing[0].c) + 1}`;
 
-    // La contraseña inicial es el DNI del alumno; si no hay DNI se usa alumnoID.
-    // Se almacena siempre hasheada con bcrypt (10 rondas de sal).
-    const password = dni || `alumno${id}`;
+    // La contraseña inicial es el DNI del alumno; si no hay DNI se genera
+    // una contraseña aleatoria de 8 caracteres (hex) para evitar patrones predecibles.
+    const password = dni || randomBytes(4).toString('hex');
     const hash = await bcrypt.hash(password, 10);
     const { parent_phone } = req.body;
 
@@ -272,13 +273,20 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 
     // Actualizar el teléfono del apoderado y notificar si cambió.
     if (parent_phone !== undefined) {
+      // Obtener el teléfono actual para saber si realmente cambió
+      const [parentRows] = await pool.query(
+        `SELECT u.phone FROM users u JOIN parent_student ps ON ps.parent_id = u.id WHERE ps.student_id=? LIMIT 1`,
+        [req.params.id]
+      );
+      const currentPhone = parentRows[0]?.phone || null;
+      const phoneChanged = (parent_phone || null) !== currentPhone;
+
       await pool.query(
         `UPDATE users SET phone=? WHERE id IN (SELECT parent_id FROM parent_student WHERE student_id=?)`,
         [parent_phone || null, req.params.id]
       );
-      // Notify new phone via WhatsApp
-      // Enviar confirmación al nuevo número para que el apoderado sepa que quedó vinculado.
-      if (parent_phone) {
+      // Solo enviar WhatsApp si el número realmente cambió
+      if (parent_phone && phoneChanged) {
         const [stu] = await pool.query('SELECT first_name, last_name FROM students WHERE id=?', [req.params.id]);
         if (stu.length) {
           sendWhatsApp(parent_phone, `📢 *Colegio Emanuel*\n\nNúmero vinculado a *${stu[0].first_name} ${stu[0].last_name}*.\n\n_Enviado por: ${req.user.role === 'director' ? 'Director' : req.user.role === 'secretaria' ? 'Secretaria' : 'Administrador'} ${req.user.full_name}_`).catch(() => {});
@@ -310,46 +318,49 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
 // de conversión automática de ? → $N (operaciones de verificación).
 // ------------------------------------------------------------
 router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
+  const client = await pool._pool.connect();
   try {
     const id = req.params.id;
+    await client.query('BEGIN');
 
-    // Grab parent IDs before deleting anything
-    // Obtener los apoderados vinculados ANTES de borrar parent_student,
-    // porque después no existirá la relación para consultarla.
-    const parentResult = await pool._pool.query(
+    // Obtener apoderados vinculados ANTES de borrar parent_student
+    const parentResult = await client.query(
       `SELECT parent_id FROM parent_student WHERE student_id=$1`, [id]
     );
     const parentIds = parentResult.rows.map(r => r.parent_id);
 
-    // Delete student data
-    // Eliminar en cascada los registros dependientes del alumno.
-    await pool.query('DELETE FROM attendance WHERE student_id=?', [id]);
-    await pool.query('DELETE FROM grades WHERE student_id=?', [id]);
-    await pool.query('DELETE FROM payments WHERE student_id=?', [id]);
-    await pool.query('DELETE FROM parent_student WHERE student_id=?', [id]);
-    await pool.query('DELETE FROM students WHERE id=?', [id]);
+    // Eliminar en cascada dentro de la transacción
+    await client.query(`DELETE FROM attendance WHERE student_id=$1`, [id]);
+    await client.query(`DELETE FROM grades WHERE student_id=$1`, [id]);
+    await client.query(`DELETE FROM payments WHERE student_id=$1`, [id]);
+    await client.query(`DELETE FROM parent_student WHERE student_id=$1`, [id]);
+    await client.query(`DELETE FROM students WHERE id=$1`, [id]);
 
-    // Delete parent users that have no other children
-    // Verificar cada apoderado: si quedó sin otros hijos vinculados,
-    // se elimina también su cuenta de usuario y sus tokens push,
-    // ya que no tendría razón de seguir en el sistema.
-    for (const parentId of parentIds) {
-      const { rows } = await pool._pool.query(
-        `SELECT 1 FROM parent_student WHERE parent_id=$1 LIMIT 1`, [parentId]
+    // Eliminar apoderados sin otros hijos en una sola query
+    if (parentIds.length) {
+      await client.query(
+        `DELETE FROM push_tokens WHERE user_id = ANY(
+           SELECT p FROM UNNEST($1::int[]) p
+           WHERE NOT EXISTS (SELECT 1 FROM parent_student WHERE parent_id=p)
+         )`, [parentIds]
       );
-      if (!rows.length) {
-        // El apoderado no tiene más hijos → eliminar tokens push y luego el usuario.
-        await pool.query('DELETE FROM push_tokens WHERE user_id=?', [parentId]);
-        await pool.query('DELETE FROM users WHERE id=?', [parentId]);
-      }
+      await client.query(
+        `DELETE FROM users WHERE id = ANY(
+           SELECT p FROM UNNEST($1::int[]) p
+           WHERE NOT EXISTS (SELECT 1 FROM parent_student WHERE parent_id=p)
+         )`, [parentIds]
+      );
     }
 
-    // Notificar a clientes SSE para que refresquen la lista de alumnos.
+    await client.query('COMMIT');
     broadcast();
     res.json({ message: 'Alumno eliminado' });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: 'Error del servidor' });
+  } finally {
+    client.release();
   }
 });
 

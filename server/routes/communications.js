@@ -78,8 +78,12 @@ router.get('/', async (req, res) => {
       // (El bloque queda vacío a propósito.)
     }
 
-    // Ordena por fecha de creación descendente para mostrar los más recientes primero.
-    query += ' ORDER BY co.created_at DESC';
+    // Ordena por fecha de creación descendente y pagina (50 por página)
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    query += ' ORDER BY co.created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
     const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (err) {

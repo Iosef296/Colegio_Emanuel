@@ -106,10 +106,12 @@ router.get('/', async (req, res) => {
     if (date) { query += ` AND a.date=?`; params.push(date); }
     if (turno) { query += ` AND a.turno=?`; params.push(turno); }
 
-    // Filtrar por mes y año usando EXTRACT de PostgreSQL (más preciso que LIKE en fecha).
+    // Filtrar por rango de fecha (permite usar el índice idx_attendance_date)
     if (month && year) {
-      query += ` AND EXTRACT(MONTH FROM a.date)=? AND EXTRACT(YEAR FROM a.date)=?`;
-      params.push(month, year);
+      const from = `${year}-${String(month).padStart(2,'0')}-01`;
+      const to   = `${month == 12 ? Number(year)+1 : year}-${String(month==12?1:Number(month)+1).padStart(2,'0')}-01`;
+      query += ` AND a.date >= ? AND a.date < ?`;
+      params.push(from, to);
     }
 
     query += ' ORDER BY a.date DESC';

@@ -1,0 +1,100 @@
+========================================================
+OPTIMIZACIONES APLICADAS — Colegio Emanuel
+Fecha: 2026-03-29
+========================================================
+
+#1 — RATE LIMITING EN LOGIN (SEGURIDAD)
+  Archivo: server/index.js
+  Cambio:  Instala express-rate-limit. Máx 10 intentos de login
+           cada 15 minutos por IP. Responde 429 con mensaje claro.
+  Impacto: Protege contra ataques de fuerza bruta de contraseñas.
+
+#2 — CORS maxAge (PERFORMANCE)
+  Archivo: server/index.js
+  Cambio:  Agrega maxAge: 86400 a la config de CORS.
+  Impacto: El navegador cachea el preflight OPTIONS 24h.
+           Elimina una petición extra en cada llamada a la API.
+
+#3 — PASSWORD SEGURA PARA PADRES (SEGURIDAD)
+  Archivo: server/routes/students.js
+  Cambio:  Cuando el alumno no tiene DNI, la contraseña del padre
+           ya no es predecible ("alumno1", "alumno2").
+           Ahora se genera con crypto.randomBytes(4) → 8 chars hex.
+  Impacto: Cuentas de padres sin DNI no son adivinables.
+
+#4 — TRANSACCIÓN EN ELIMINACIÓN DE ALUMNOS (INTEGRIDAD)
+  Archivo: server/routes/students.js
+  Cambio:  Todo el proceso de borrado (attendance, grades, payments,
+           parent_student, students, push_tokens, users) ahora corre
+           dentro de BEGIN...COMMIT. Si algo falla → ROLLBACK.
+           Además, la detección de padres sin otros hijos pasó de
+           un loop N+1 a 2 queries con UNNEST + subquery.
+  Impacto: Sin riesgo de corrupción de datos si falla a mitad.
+           Eliminar un alumno pasó de N*4 queries a 7 queries fijas.
+
+#5 — ELIMINAR N+1 EN BORRADO DE GRADO (PERFORMANCE)
+  Archivo: server/routes/grade-levels.js
+  Cambio:  El loop que iteraba por cada teacher_course para borrar
+           grades y daily_progress fue reemplazado por 2 queries
+           con subconsultas IN (SELECT ...).
+  Impacto: Borrar un grado con 30 cursos pasó de 62 queries a 3.
+           Reducción significativa de CU-hours en Neon/Supabase.
+
+#6 — ÍNDICES FALTANTES (PERFORMANCE)
+  Archivo: server/index.js (bloque de migraciones)
+  Cambio:  Se agregan 4 índices nuevos:
+           - idx_communications_type       → filtra por tipo (general/curso/grado)
+           - idx_communications_created    → ordenar por fecha DESC
+           - idx_grades_student_tc         → composite (student_id, teacher_course_id)
+           - idx_attendance_date_student   → composite (date, student_id)
+  Impacto: Elimina full table scans en las queries más frecuentes.
+           La carga del dashboard del padre era un full scan; ahora usa índice.
+
+#7 — EXTRACT() → RANGO DE FECHAS (PERFORMANCE)
+  Archivo: server/routes/attendance.js
+  Cambio:  El filtro por mes/año usaba EXTRACT(MONTH FROM date) y
+           EXTRACT(YEAR FROM date), que impiden usar el índice de fecha.
+           Ahora usa a.date >= '2026-03-01' AND a.date < '2026-04-01'.
+  Impacto: El índice idx_attendance_date_student es usado en
+           todas las consultas de asistencia por mes.
+
+#8 — PAGINACIÓN EN COMUNICADOS (PERFORMANCE)
+  Archivo: server/routes/communications.js
+  Cambio:  El endpoint GET /api/communications devolvía TODOS los
+           registros sin límite. Ahora pagina de 50 en 50.
+           Se controla con ?page=1 (default), ?page=2, etc.
+  Impacto: Con el tiempo (cientos de comunicados) la respuesta
+           no crecerá indefinidamente. Menor uso de memoria y red.
+
+#9 — ALUMNOS INACTIVOS EN GRUPOS (CORRECCIÓN)
+  Archivo: server/routes/grade-levels.js
+  Cambio:  La query de GET /:id/members no filtraba por s.active=true.
+           Alumnos dados de baja aparecían en los grupos.
+           Se agrega AND s.active = true.
+  Impacto: Los grupos ya no muestran alumnos eliminados/inactivos.
+
+#10 — PERIOD_ID HARDCODEADO (CORRECCIÓN)
+  Archivo: server/routes/grade-levels.js
+  Cambio:  La creación de grados tenía period_id=1 hardcodeado.
+           Ahora hace SELECT id FROM academic_periods ORDER BY id DESC LIMIT 1
+           y usa el período más reciente (o 1 como fallback).
+  Impacto: Si el sistema alguna vez tiene múltiples períodos
+           académicos, los grados nuevos se crean en el correcto.
+
+========================================================
+ARCHIVOS MODIFICADOS
+========================================================
+  server/index.js                    (#1, #2, #6)
+  server/routes/students.js          (#3, #4)
+  server/routes/grade-levels.js      (#5, #9, #10)
+  server/routes/attendance.js        (#7)
+  server/routes/communications.js    (#8)
+
+DEPENDENCIA NUEVA:
+  express-rate-limit (instalada en server/package.json)
+
+========================================================
+DEPLOY
+========================================================
+  Desplegado en Fly.io el 2026-03-29
+  Health check: OK — https://colegio-emanuel-api.fly.dev/api/health

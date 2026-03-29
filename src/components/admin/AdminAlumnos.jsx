@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import { api } from '../../api/client';
 import Icon from '../common/Icon';
@@ -39,6 +39,12 @@ export default function AdminAlumnos() {
 
   // URL de previsualización de la foto (data URL o URL de R2)
   const [photoPreview, setPhotoPreview] = useState(null);
+
+  // true si el usuario eliminó la foto existente
+  const [photoDeleted, setPhotoDeleted] = useState(false);
+
+  // Ref al input[file] oculto
+  const photoRef = useRef(null);
 
   // Alumno cuyo QR se quiere mostrar en el modal
   const [qrStudent, setQrStudent] = useState(null);
@@ -103,6 +109,7 @@ export default function AdminAlumnos() {
     setMessage('');
     setPhotoFile(null);
     setPhotoPreview(null);
+    setPhotoDeleted(false);
   };
 
   // Maneja la selección de una foto de perfil para el alumno.
@@ -142,8 +149,8 @@ export default function AdminAlumnos() {
       parent_phone: s.parent_phone || '',
     });
     setPhotoFile(null);
-    // Carga la foto existente como previsualización
     setPhotoPreview(s.photo_url || null);
+    setPhotoDeleted(false);
     setEditing(s.id);
     setShowForm(true);
   };
@@ -164,7 +171,7 @@ export default function AdminAlumnos() {
     setSaving(true);
     try {
       // Si hay un archivo nuevo se sube a R2; si no, se reutiliza la URL existente (o null)
-      let photo_url = photoFile ? null : (photoPreview || null);
+      let photo_url = photoDeleted ? null : (photoFile ? null : (photoPreview || null));
       if (photoFile) {
         const fd = new FormData();
         fd.append('photo', photoFile);
@@ -290,19 +297,26 @@ export default function AdminAlumnos() {
             {message && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: message.includes('Error') ? '#FEE2E2' : '#D1FAE5', color: message.includes('Error') ? 'var(--danger)' : 'var(--success)', fontSize: 13 }}>{message}</div>}
 
             <form onSubmit={handleSubmit}>
-              {/* Sección de foto de perfil: clic en el círculo abre el selector de archivos oculto */}
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <label htmlFor="student-photo-input" style={{ cursor: 'pointer' }}>
-                  <div style={{ width: 80, height: 80, borderRadius: '50%', border: `2px dashed ${photoPreview ? 'var(--primary)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden', background: '#F9FAFB' }}>
-                    {photoPreview
-                      ? <img src={photoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <Icon name="camera" color="var(--text-muted)" size={28} />
-                    }
-                  </div>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Toca para tomar o escoger foto</p>
-                </label>
-                {/* Input de archivo oculto; se activa desde el label de arriba */}
-                <input id="student-photo-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+              {/* Sección de foto de perfil */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <div onClick={() => photoRef.current?.click()}
+                  style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg)', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  {photoPreview
+                    ? <img src={photoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <Icon name="user" color="var(--text-muted)" size={32} />}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => photoRef.current?.click()}>
+                    {photoPreview ? 'Cambiar foto' : 'Subir foto'}
+                  </button>
+                  {photoPreview && (
+                    <button type="button" className="btn" style={{ fontSize: 12, padding: '4px 12px', background: '#FEE2E2', color: '#DC2626', border: 'none' }}
+                      onClick={() => { setPhotoPreview(null); setPhotoFile(null); setPhotoDeleted(true); }}>
+                      Eliminar foto
+                    </button>
+                  )}
+                </div>
+                <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
               </div>
 
               {/* Campos del formulario de alumno */}

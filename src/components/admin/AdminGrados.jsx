@@ -127,6 +127,7 @@ export default function AdminGrados() {
 
   // URL de previsualización de la foto del alumno
   const [studentPhotoPreview, setStudentPhotoPreview] = useState(null);
+  const [studentPhotoDeleted, setStudentPhotoDeleted] = useState(false);
 
   // Ref al input de archivo oculto del formulario de alumno
   const studentPhotoRef = useRef(null);
@@ -136,6 +137,20 @@ export default function AdminGrados() {
 
   // Data URL con la imagen PNG del QR generado por la librería qrcode
   const [qrDataUrl, setQrDataUrl] = useState('');
+
+  // ── Estado de grupos "Otros" (círculos de estudio, etc.) ──
+
+  // Miembros del grupo seleccionado (aplica solo a grados tipo "Otros")
+  const [groupMembers, setGroupMembers] = useState([]);
+
+  // Controla la visibilidad del modal para agregar un miembro al grupo
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+
+  // Texto de búsqueda dentro del modal de agregar miembro
+  const [memberSearch, setMemberSearch] = useState('');
+
+  // Alumno al que se le asignará un grado (modal de "Alumnos sin asignar")
+  const [assigningGradeStudent, setAssigningGradeStudent] = useState(null);
 
   // Carga grados, alumnos y usuarios en paralelo desde la API.
   // Si silent=true omite el spinner para refrescos en segundo plano.
@@ -187,21 +202,37 @@ export default function AdminGrados() {
   const currentMonth = MONTHS[new Date().getMonth()];
   const currentYear = new Date().getFullYear();
 
+  // Determina si un grado es un grupo tipo "Otros" (círculo de estudio, etc.).
+  // "Alumnos sin asignar" es un grado especial que se comporta como grado normal aunque esté en "Otros".
+  const isOtros = (name) => {
+    const n = (name || '').toLowerCase();
+    if (n === 'alumnos sin asignar') return false;
+    if (n.includes('circulo') || n.includes('círculo')) return true;
+    return !n.includes('inicial') && !n.includes('primaria') && !n.includes('secundaria');
+  };
+
   // Selecciona un grado para entrar a VIEW 2 y carga sus datos adicionales (notas, pagos, cursos).
+  // Para grados "Otros" también carga la lista de miembros del grupo.
   // También reinicia la expansión de alumnos para empezar desde un estado limpio.
   const handleSelectGrade = (g) => {
     setSelectedGrade(g);
     setExpandedStudents({});
+    setGroupMembers([]);
     setGradeGradesLoading(true);
-    Promise.all([
-      api.get(`/grades?grade_level_id=${g.id}`),  // calificaciones del grado
-      api.get('/payments'),                         // pagos (para indicador de mensualidad)
-      api.get('/teacher-courses'),                  // asignaciones de cursos para filtrar por grado
-    ]).then(([gr, py, tc]) => {
+    const promises = [
+      api.get(`/grades?grade_level_id=${g.id}`),
+      api.get('/payments'),
+      api.get('/teacher-courses'),
+    ];
+    // Si es un grupo "Otros", carga también los miembros asignados
+    if (isOtros(g.name)) {
+      promises.push(api.get(`/grade-levels/${g.id}/members`));
+    }
+    Promise.all(promises).then(([gr, py, tc, members]) => {
       setGradeGrades(gr);
       setPayments(py);
-      // Filtra solo las asignaciones que corresponden al grado seleccionado
       setGradeCourses(tc.filter(c => c.grade_level_id === g.id));
+      if (members) setGroupMembers(members);
     })
       .catch(console.error)
       .finally(() => setGradeGradesLoading(false));
@@ -357,8 +388,8 @@ export default function AdminGrados() {
       parent_phone: s.parent_phone || '',
     });
     setStudentPhotoFile(null);
-    // Carga la foto existente del alumno como previsualización inicial
     setStudentPhotoPreview(s.photo_url || null);
+    setStudentPhotoDeleted(false);
     setEditingStudent(s.id);
     setShowStudentForm(true);
   };
@@ -390,7 +421,7 @@ export default function AdminGrados() {
     setStudentSaving(true);
     try {
       // Sube la foto nueva si fue seleccionada; si no, reutiliza la URL existente
-      let photo_url = studentPhotoFile ? null : (studentPhotoPreview || null);
+      let photo_url = studentPhotoDeleted ? null : (studentPhotoFile ? null : (studentPhotoPreview || null));
       if (studentPhotoFile) {
         const fd = new FormData();
         fd.append('photo', studentPhotoFile);
@@ -465,6 +496,42 @@ export default function AdminGrados() {
     } catch (err) { console.error(err); }
   };
 
+  // Agrega un alumno al grupo "Otros" y actualiza la lista de miembros.
+  const handleAddMember = async (student) => {
+    try {
+      await api.post(`/grade-levels/${selectedGrade.id}/members`, { student_id: student.id });
+      // Evitar duplicados en el estado local
+      setGroupMembers(prev => prev.find(m => m.id === student.id) ? prev : [...prev, { ...student, grade_name: grades.find(g => g.id === student.grade_level_id)?.name, grade_color: grades.find(g => g.id === student.grade_level_id)?.color }]);
+      setShowAddMemberModal(false);
+      setMemberSearch('');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  // Asigna un alumno de "Alumnos sin asignar" a un grado real y actualiza la lista local.
+  const handleAssignGrade = async (student, gradeId) => {
+    try {
+      await api.put(`/students/${student.id}`, { ...student, grade_level_id: gradeId });
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, grade_level_id: gradeId } : s));
+      setAssigningGradeStudent(null);
+      load(true);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  // Quita un alumno del grupo "Otros" y lo elimina del estado local.
+  const handleRemoveMember = async (student) => {
+    if (!confirm(`¿Quitar a ${student.first_name} ${student.last_name} del grupo?`)) return;
+    try {
+      await api.delete(`/grade-levels/${selectedGrade.id}/members/${student.id}`);
+      setGroupMembers(prev => prev.filter(m => m.id !== student.id));
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   // Pantalla de carga mientras se obtienen los datos iniciales de la API
   if (loading) return <div className="loading">Cargando...</div>;
 
@@ -477,8 +544,8 @@ export default function AdminGrados() {
         // Clic en overlay limpia el estado y cierra el modal
         <div className="modal-overlay" onClick={() => { setQrStudent(null); setQrDataUrl(''); }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3>QR - {qrStudent.first_name} {qrStudent.last_name}</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>
+            <h3 style={{ textTransform: 'uppercase' }}>QR - {qrStudent.first_name} {qrStudent.last_name}</h3>
+            <p style={{ fontSize: 13, fontWeight: 600, color: qrStudent.grade_color || grades.find(g => g.id === qrStudent.grade_level_id)?.color || 'var(--primary)', marginBottom: 4 }}>
               {qrStudent.grade_name}{qrStudent.section ? ` "${qrStudent.section}"` : ''}
             </p>
 
@@ -528,18 +595,26 @@ export default function AdminGrados() {
             {studentMessage && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: studentMessage.includes('Error') ? '#FEE2E2' : '#D1FAE5', color: studentMessage.includes('Error') ? 'var(--danger)' : 'var(--success)', fontSize: 13 }}>{studentMessage}</div>}
 
             <form onSubmit={handleStudentSubmit}>
-              {/* Selector de foto de alumno: clic en círculo activa el input oculto */}
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <label htmlFor="student-photo-input-g" style={{ cursor: 'pointer' }}>
-                  <div style={{ width: 80, height: 80, borderRadius: '50%', border: `2px dashed ${studentPhotoPreview ? 'var(--primary)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden', background: '#F9FAFB' }}>
-                    {studentPhotoPreview
-                      ? <img src={studentPhotoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <Icon name="camera" color="var(--text-muted)" size={28} />}
-                  </div>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Toca para tomar o escoger foto</p>
-                </label>
-                {/* Input oculto; el sufijo "-g" evita conflicto de IDs con AdminAlumnos si ambos están en el DOM */}
-                <input id="student-photo-input-g" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleStudentPhotoChange} />
+              {/* Selector de foto de alumno */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <div onClick={() => studentPhotoRef.current?.click()}
+                  style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg)', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  {studentPhotoPreview
+                    ? <img src={studentPhotoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <Icon name="user" color="var(--text-muted)" size={32} />}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => studentPhotoRef.current?.click()}>
+                    {studentPhotoPreview ? 'Cambiar foto' : 'Subir foto'}
+                  </button>
+                  {studentPhotoPreview && (
+                    <button type="button" className="btn" style={{ fontSize: 12, padding: '4px 12px', background: '#FEE2E2', color: '#DC2626', border: 'none' }}
+                      onClick={() => { setStudentPhotoPreview(null); setStudentPhotoFile(null); setStudentPhotoDeleted(true); }}>
+                      Eliminar foto
+                    </button>
+                  )}
+                </div>
+                <input ref={studentPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleStudentPhotoChange} />
               </div>
 
               {/* Campos del formulario de alumno */}
@@ -677,6 +752,77 @@ export default function AdminGrados() {
         </div>
       )}
 
+      {/* Modal para asignar un grado a un alumno de "Alumnos sin asignar" */}
+      {assigningGradeStudent && (
+        <div className="modal-overlay" onClick={() => setAssigningGradeStudent(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Asignar grado</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+              {assigningGradeStudent.first_name} {assigningGradeStudent.last_name}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 360, overflowY: 'auto' }}>
+              {grades.filter(g => g.name !== 'Alumnos sin asignar').map(g => (
+                <div key={g.id} onClick={() => handleAssignGrade(assigningGradeStudent, g.id)}
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px' }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: g.color || '#7C3AED', flexShrink: 0 }} />
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>{g.name}{g.section ? ` "${g.section}"` : ''}</p>
+                </div>
+              ))}
+            </div>
+            <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
+              onClick={() => setAssigningGradeStudent(null)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar un alumno a un grupo "Otros" */}
+      {showAddMemberModal && (
+        <div className="modal-overlay" onClick={() => { setShowAddMemberModal(false); setMemberSearch(''); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Agregar alumno al grupo</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>Busca un alumno de cualquier grado</p>
+            <input
+              className="form-input"
+              placeholder="Buscar alumno..."
+              value={memberSearch}
+              onChange={e => setMemberSearch(e.target.value)}
+              style={{ marginBottom: 12 }}
+              autoFocus
+            />
+            <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(() => {
+                const q = memberSearch.toLowerCase().trim();
+                const alreadyIds = new Set(groupMembers.map(m => m.id));
+                const filtered = students.filter(s =>
+                  s.active &&
+                  !alreadyIds.has(s.id) &&
+                  (q === '' || `${s.first_name} ${s.last_name}`.toLowerCase().includes(q))
+                ).slice(0, 20);
+                if (!filtered.length) return <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 16 }}>Sin resultados</p>;
+                return filtered.map(s => {
+                  const g = grades.find(x => x.id === s.grade_level_id);
+                  return (
+                    <div key={s.id} onClick={() => handleAddMember(s)}
+                      className="card"
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 12px' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: (g?.color || '#7C3AED') + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {s.photo_url ? <img src={s.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="user" size={18} color={g?.color || '#7C3AED'} />}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{g?.name}{g?.section ? ` "${g.section}"` : ''}</p>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }} onClick={() => { setShowAddMemberModal(false); setMemberSearch(''); }}>Cerrar</button>
+          </div>
+        </div>
+      )}
+
       {/* Modal de confirmación de eliminación de grado.
           Se usa un modal personalizado en lugar de window.confirm para mayor control visual. */}
       {confirmDelete && (
@@ -708,10 +854,13 @@ export default function AdminGrados() {
   // ── VISTA 2: Detalle del grado seleccionado con lista de alumnos ──
   // Se activa cuando el usuario hace clic en un grado en VIEW 1.
   if (selectedGrade) {
-    // Filtra y ordena los alumnos del grado por apellido (orden alfabético)
-    const gradeStudents = students
-      .filter(s => s.grade_level_id === selectedGrade.id)
-      .sort((a, b) => a.last_name.localeCompare(b.last_name));
+    const gradoEsOtros = isOtros(selectedGrade.name);
+
+    // Para grados normales: filtra alumnos por grade_level_id y ordena por apellido.
+    // Para grados "Otros": usa la lista de miembros cargada desde group_members.
+    const gradeStudents = gradoEsOtros
+      ? [...groupMembers].sort((a, b) => a.last_name.localeCompare(b.last_name))
+      : students.filter(s => s.grade_level_id === selectedGrade.id).sort((a, b) => a.last_name.localeCompare(b.last_name));
 
     return (
       <div>
@@ -722,74 +871,101 @@ export default function AdminGrados() {
               <div onClick={() => setSelectedGrade(null)} style={{ cursor: 'pointer', opacity: 0.8 }}>←</div>
               <div>
                 <h1>{selectedGrade.name}{selectedGrade.section ? ` "${selectedGrade.section}"` : ''}</h1>
-                {/* Subtítulo con conteo de alumnos y nombre del tutor si existe */}
-                <p>{gradeStudents.length} alumnos{selectedGrade.tutor_name ? ` · Tutor: ${selectedGrade.tutor_name}` : ''}</p>
+                {/* Subtítulo con conteo de miembros y nombre del tutor si existe */}
+                <p>{gradeStudents.length} {gradoEsOtros ? 'miembro' : 'alumno'}{gradeStudents.length !== 1 ? 's' : ''}{selectedGrade.tutor_name ? ` · Tutor: ${selectedGrade.tutor_name}` : ''}</p>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              {/* Botón para abrir el modal de asignación de tutor */}
-              <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', fontSize: 12 }}
-                onClick={() => setShowTutorModal(true)}>
-                Asignar tutor
-              </button>
-              {/* Botón para crear nuevo alumno en este grado */}
-              <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }}
-                onClick={() => { resetStudentForm(); setShowStudentForm(true); }}>
-                + Nuevo
-              </button>
+              {selectedGrade.name === 'Alumnos sin asignar' ? null : (
+                <>
+                  <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', fontSize: 12 }}
+                    onClick={() => setShowTutorModal(true)}>
+                    Asignar tutor
+                  </button>
+                  {gradoEsOtros ? (
+                    <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }}
+                      onClick={() => { setMemberSearch(''); setShowAddMemberModal(true); }}>
+                      + Agregar
+                    </button>
+                  ) : (
+                    <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }}
+                      onClick={() => { resetStudentForm(); setShowStudentForm(true); }}>
+                      + Nuevo
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
 
         <div className="content-area">
-          {gradeStudents.length === 0 && <div className="empty-state"><p>Sin alumnos en este grado</p></div>}
-
-          {/* Tarjeta de cada alumno con foto, datos y botones de acción */}
-          {gradeStudents.map(s => (
-            <div key={s.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                {/* Avatar del alumno con el color del grado como fondo; 22 hex = ~13% de opacidad */}
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: (selectedGrade.color || '#7C3AED') + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                  {s.photo_url
-                    ? <img src={s.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Icon name="user" color={selectedGrade.color || '#7C3AED'} size={20} />}
-                </div>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {s.dni ? `DNI: ${s.dni}` : 'Sin DNI'}
-                    {' · '}
-                    {/* Teléfono en verde si registrado, rojo si falta */}
-                    {s.parent_phone
-                      ? <span style={{ color: '#10B981' }}>📱 {s.parent_phone}</span>
-                      : <span style={{ color: '#EF4444' }}>Sin teléfono</span>}
-                  </p>
-                </div>
-              </div>
-
-              {/* Botones de acción por alumno */}
-              <div style={{ display: 'flex', gap: 6 }}>
-                {/* Ver/generar QR del alumno */}
-                <button onClick={() => setQrStudent(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }} title="Ver QR">
-                  <Icon name="qr" size={14} />
-                </button>
-                {/* Editar datos del alumno */}
-                <button onClick={() => handleStudentEdit(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
-                  <Icon name="edit" size={14} />
-                </button>
-                {/* Activar/desactivar alumno */}
-                <button onClick={e => { e.stopPropagation(); handleStudentToggleActive(s); }}
-                  className={`btn btn-sm ${s.active ? 'btn-danger' : 'btn-success'}`}
-                  style={{ padding: '4px 8px', fontSize: 10 }}>
-                  {s.active ? 'Desact.' : 'Activar'}
-                </button>
-                {/* Eliminar alumno permanentemente */}
-                <button onClick={() => handleStudentDelete(s)} className="btn btn-sm btn-danger" style={{ padding: '4px 8px' }}>
-                  <Icon name="trash" size={14} />
-                </button>
-              </div>
+          {gradeStudents.length === 0 && (
+            <div className="empty-state">
+              <p>{gradoEsOtros ? 'Sin miembros en este grupo' : 'Sin alumnos en este grado'}</p>
             </div>
-          ))}
+          )}
+
+          {/* Tarjeta de cada alumno/miembro con foto, datos y botones de acción */}
+          {gradeStudents.map(s => {
+            // Para grados "Otros" muestra el grado base del alumno; para grados normales no aplica
+            const memberGradeColor = s.grade_color || selectedGrade.color || '#7C3AED';
+            return (
+              <div key={s.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                  {/* Avatar con el color del grado base del alumno como fondo */}
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: memberGradeColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                    {s.photo_url
+                      ? <img src={s.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <Icon name="user" color={memberGradeColor} size={20} />}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      {/* Para grupos "Otros" muestra el grado base del alumno */}
+                      {gradoEsOtros && s.grade_name && <span style={{ marginRight: 6, color: memberGradeColor, fontWeight: 600 }}>{s.grade_name}</span>}
+                      {s.dni ? `DNI: ${s.dni}` : 'Sin DNI'}
+                      {' · '}
+                      {s.parent_phone
+                        ? <span style={{ color: '#10B981' }}>📱 {s.parent_phone}</span>
+                        : <span style={{ color: '#EF4444' }}>Sin teléfono</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botones de acción por alumno/miembro */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => setQrStudent(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }} title="Ver QR">
+                    <Icon name="qr" size={14} />
+                  </button>
+                  {selectedGrade.name === 'Alumnos sin asignar' ? (
+                    // En "Alumnos sin asignar": botón para asignar a un grado real
+                    <button onClick={() => setAssigningGradeStudent(s)} className="btn btn-sm btn-primary" style={{ padding: '4px 10px', fontSize: 12 }}>
+                      Asignar grado
+                    </button>
+                  ) : gradoEsOtros ? (
+                    <button onClick={() => handleRemoveMember(s)} className="btn btn-sm btn-danger" style={{ padding: '4px 8px' }} title="Quitar del grupo">
+                      <Icon name="trash" size={14} />
+                    </button>
+                  ) : (
+                    <>
+                      <button onClick={() => handleStudentEdit(s)} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
+                        <Icon name="edit" size={14} />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); handleStudentToggleActive(s); }}
+                        className={`btn btn-sm ${s.active ? 'btn-danger' : 'btn-success'}`}
+                        style={{ padding: '4px 8px', fontSize: 10 }}>
+                        {s.active ? 'Desact.' : 'Activar'}
+                      </button>
+                      <button onClick={() => handleStudentDelete(s)} className="btn btn-sm btn-danger" style={{ padding: '4px 8px' }}>
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
         {modals}
       </div>
@@ -875,41 +1051,66 @@ export default function AdminGrados() {
           })()
         ) : null}
 
-        {/* Lista de grados: visible solo cuando el buscador está vacío */}
-        {!search.trim() && grades.map(g => {
-          const total = countStudents(g.id);
-          return (
-            // Clic en la tarjeta del grado llama a handleSelectGrade para cargar los datos y entrar a VIEW 2
-            <div key={g.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}
-              onClick={() => handleSelectGrade(g)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                {/* Imagen o ícono del grado con overflow hidden para foto circular */}
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: (g.color || '#7C3AED') + '20', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {g.photo_url
-                    ? <img src={g.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Icon name="users" color={g.color || '#7C3AED'} size={20} />}
-                </div>
-                <div>
-                  <p style={{ fontSize: 15, fontWeight: 700 }}>{g.name}{g.section ? ` "${g.section}"` : ''}</p>
-                  {/* Nombre del tutor en el color del grado si existe */}
-                  {g.tutor_name && <p style={{ fontSize: 11, color: g.color || '#7C3AED', fontWeight: 600 }}>Tutor: {g.tutor_name}</p>}
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{total} alumno{total !== 1 ? 's' : ''}</p>
-                </div>
-              </div>
-
-              {/* Botones de editar y eliminar; stopPropagation evita disparar el clic de navegación */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={e => { e.stopPropagation(); handleEdit(g); }} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
-                  <Icon name="edit" size={14} />
-                </button>
-                {/* Eliminar abre el modal de confirmación en lugar de window.confirm */}
-                <button onClick={e => { e.stopPropagation(); setConfirmDelete(g); }} className="btn btn-sm btn-danger" style={{ padding: '4px 8px' }}>
-                  <Icon name="trash" size={14} />
-                </button>
-              </div>
+        {/* Lista de grados agrupada por nivel: Inicial, Primaria, Secundaria */}
+        {!search.trim() && (() => {
+          const getLevel = (name) => {
+            const n = name.toLowerCase();
+            if (n.includes('circulo') || n.includes('círculo')) return 'Otros';
+            if (n.includes('inicial')) return 'Inicial';
+            if (n.includes('primaria')) return 'Primaria';
+            if (n.includes('secundaria')) return 'Secundaria';
+            return 'Otros';
+          };
+          const order = ['Inicial', 'Primaria', 'Secundaria', 'Otros'];
+          const grouped = {};
+          grades.forEach(g => {
+            const lvl = getLevel(g.name);
+            if (!grouped[lvl]) grouped[lvl] = [];
+            grouped[lvl].push(g);
+          });
+          // Filtra "Alumnos sin asignar" con 0 alumnos antes de decidir si mostrar la sección
+          Object.keys(grouped).forEach(lvl => {
+            grouped[lvl] = grouped[lvl].filter(g => !(g.name === 'Alumnos sin asignar' && countStudents(g.id) === 0));
+            if (grouped[lvl].length === 0) delete grouped[lvl];
+          });
+          return order.filter(lvl => grouped[lvl]).map(lvl => (
+            <div key={lvl} style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{lvl}</p>
+              {grouped[lvl].map(g => {
+                const gradoOtros = isOtros(g.name);
+                const total = gradoOtros ? Number(g.member_count || 0) : countStudents(g.id);
+                const label = gradoOtros ? 'miembro' : 'alumno';
+                return (
+                  <div key={g.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}
+                    onClick={() => handleSelectGrade(g)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 12, background: (g.color || '#7C3AED') + '20', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {g.photo_url
+                          ? <img src={g.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <Icon name="users" color={g.color || '#7C3AED'} size={20} />}
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 15, fontWeight: 700 }}>{g.name}{g.section ? ` "${g.section}"` : ''}</p>
+                        {g.tutor_name && <p style={{ fontSize: 11, color: g.color || '#7C3AED', fontWeight: 600 }}>Tutor: {g.tutor_name}</p>}
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{total} {label}{total !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={e => { e.stopPropagation(); handleEdit(g); }} className="btn btn-sm btn-secondary" style={{ padding: '4px 8px' }}>
+                        <Icon name="edit" size={14} />
+                      </button>
+                      {g.name !== 'Alumnos sin asignar' && (
+                      <button onClick={e => { e.stopPropagation(); setConfirmDelete(g); }} className="btn btn-sm btn-danger" style={{ padding: '4px 8px' }}>
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          ));
+        })()}
       </div>
       {modals}
     </div>

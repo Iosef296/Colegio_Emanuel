@@ -132,12 +132,15 @@ router.put('/:id', authorizeRoles('admin'), async (req, res) => {
     // no pueden modificar su propia cuenta (evita escalada de privilegios accidental)
     // ni cuentas con rol 'admin' (evita que tomen control del sistema).
     if (req.user.role === 'director' || req.user.role === 'secretaria') {
-      // Bloquear auto-modificación comparando el id del token con el id de la ruta
-      if (String(req.params.id) === String(req.user.id)) return res.status(403).json({ error: 'No puedes modificar tu propio usuario' });
-
-      // Consultar el rol del usuario destino para bloquear modificaciones a admins
-      const [target] = await pool.query('SELECT role FROM users WHERE id=?', [req.params.id]);
-      if (target[0]?.role === 'admin') return res.status(403).json({ error: 'No autorizado' });
+      const isSelf = String(req.params.id) === String(req.user.id);
+      if (isSelf) {
+        // Puede editar su propio perfil pero nunca cambiar su rol
+        delete req.body.role;
+      } else {
+        // No puede editar cuentas con rol admin
+        const [target] = await pool.query('SELECT role FROM users WHERE id=?', [req.params.id]);
+        if (target[0]?.role === 'admin') return res.status(403).json({ error: 'No autorizado' });
+      }
     }
 
     // Extraer todos los campos actualizables del cuerpo de la petición

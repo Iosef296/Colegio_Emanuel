@@ -28,7 +28,7 @@ router.post('/login', async (req, res) => {
     // Buscar al usuario en la base de datos por nombre de usuario.
     // Se recuperan solo los campos necesarios para la autenticación y generación del token.
     const [rows] = await pool.query(
-      'SELECT id, username, password_hash, role, full_name, active FROM users WHERE username = ?',
+      'SELECT id, username, password_hash, role, full_name, active, photo_url FROM users WHERE username = ?',
       [username]
     );
 
@@ -61,22 +61,17 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Para los padres de familia, recuperar la foto del primer hijo asociado
-    // que tenga foto disponible. Esto permite mostrar el avatar del alumno
-    // en el encabezado del panel del padre sin una petición adicional.
-    let photo_url = null;
+    // Para los padres, recuperar la foto del primer hijo asociado.
+    // Para los demás roles, usar la foto del propio usuario en la tabla users.
+    let photo_url = user.photo_url || null;
     if (user.role === 'padre') {
       const [photos] = await pool.query(
         'SELECT s.photo_url FROM students s JOIN parent_student ps ON ps.student_id = s.id WHERE ps.parent_id = ? AND s.photo_url IS NOT NULL LIMIT 1',
         [user.id]
       );
-      // Si el alumno tiene foto registrada, usarla; de lo contrario queda null
       if (photos.length > 0) photo_url = photos[0].photo_url;
     }
 
-    // Devolver el token y los datos básicos del usuario al cliente.
-    // El cliente almacenará el token en localStorage/sessionStorage para
-    // incluirlo en el header Authorization de las siguientes peticiones.
     res.json({
       token,
       user: { id: user.id, username: user.username, role: user.role, full_name: user.full_name, photo_url }
@@ -100,7 +95,7 @@ router.get('/me', authenticateToken, async (req, res) => {
     // que viene decodificado del token por el middleware authenticateToken.
     // Se excluye password_hash por seguridad.
     const [rows] = await pool.query(
-      'SELECT id, username, role, full_name, dni, email, phone FROM users WHERE id = ?',
+      'SELECT id, username, role, full_name, dni, email, phone, photo_url FROM users WHERE id = ?',
       [req.user.id]
     );
 
@@ -117,7 +112,6 @@ router.get('/me', authenticateToken, async (req, res) => {
         'SELECT s.photo_url FROM students s JOIN parent_student ps ON ps.student_id = s.id WHERE ps.parent_id = ? AND s.photo_url IS NOT NULL LIMIT 1',
         [userData.id]
       );
-      // Asignar la URL de la foto si existe, o null si el alumno no tiene foto
       userData.photo_url = photos.length > 0 ? photos[0].photo_url : null;
     }
 

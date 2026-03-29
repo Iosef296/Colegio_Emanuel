@@ -286,7 +286,7 @@ const compressImage = (file) => new Promise((resolve) => {
 //   VIEW 2 — Detalle de un usuario: asistencia y cursos asignados.
 export default function AdminUsuarios() {
   // Usuario actualmente autenticado (para evitar que el admin se desactive a sí mismo).
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateUser } = useAuth();
 
   // ── Estado: datos principales ─────────────────────────────
   const [users, setUsers] = useState([]);           // Lista de usuarios del personal.
@@ -317,6 +317,7 @@ export default function AdminUsuarios() {
   // ── Estado: foto de perfil ────────────────────────────────
   const [photoPreview, setPhotoPreview] = useState(null); // URL de preview (local o remota).
   const [photoBlob, setPhotoBlob] = useState(null);       // Blob comprimido listo para subir.
+  const [photoDeleted, setPhotoDeleted] = useState(false); // true si el usuario eliminó la foto.
   const photoRef = useRef(null);                          // Ref al input[type=file] oculto.
 
   // ── Estado: QR de usuario existente (modal de visualización) ──
@@ -424,6 +425,7 @@ export default function AdminUsuarios() {
     setMessage('');
     setPhotoPreview(null);
     setPhotoBlob(null);
+    setPhotoDeleted(false);
   };
 
   // ── Handler: handleEdit ───────────────────────────────────
@@ -434,7 +436,8 @@ export default function AdminUsuarios() {
     setEditing(u);       // Guardar referencia al usuario editado.
     setShowForm(true);
     setPhotoPreview(u.photo_url || null); // Mostrar foto actual si tiene.
-    setPhotoBlob(null);  // No hay blob nuevo aún.
+    setPhotoBlob(null);
+    setPhotoDeleted(false);
   };
 
   // ── Handler: handlePhotoChange ────────────────────────────
@@ -462,7 +465,7 @@ export default function AdminUsuarios() {
     setMessage('');
     try {
       // Mantener la foto existente por defecto; sobreescribir si hay un blob nuevo.
-      let photo_url = editing?.photo_url || null;
+      let photo_url = photoDeleted ? null : (editing?.photo_url || null);
       if (photoBlob) {
         // Subir la foto comprimida al endpoint /upload (que la guarda en R2).
         const fd = new FormData();
@@ -477,6 +480,10 @@ export default function AdminUsuarios() {
         // No enviar el campo password si está vacío (no cambiar contraseña).
         if (!data.password) delete data.password;
         await api.put(`/users/${editing.id}`, data);
+        // Si el usuario editado es el mismo que está logueado, actualizar el contexto al instante
+        if (String(editing.id) === String(currentUser?.id)) {
+          updateUser({ full_name: data.full_name, photo_url });
+        }
         setMessage('Usuario actualizado');
         load(); // Recargar lista para reflejar los cambios.
         setTimeout(resetForm, 1000); // Cerrar el modal tras 1 segundo.
@@ -561,12 +568,13 @@ export default function AdminUsuarios() {
   // ── Handler: handleDeleteAssignment ──────────────────────
   // Elimina una asignación docente↔curso tras confirmación del usuario.
   const handleDeleteAssignment = async (id) => {
-    if (!confirm('¿Eliminar esta asignación?')) return;
+    if (!confirm('¿Eliminar esta asignación? Se borrarán también las notas y avances del curso.')) return;
     try {
       await api.delete(`/teacher-courses/${id}`);
       load();
     } catch (err) {
       console.error(err);
+      alert('No se pudo eliminar la asignación.');
     }
   };
 
@@ -656,9 +664,17 @@ export default function AdminUsuarios() {
                     ? <img src={photoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <Icon name="user" color="var(--text-muted)" size={32} />}
                 </div>
-                <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => photoRef.current?.click()}>
-                  {photoPreview ? 'Cambiar foto' : 'Subir foto'}
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => photoRef.current?.click()}>
+                    {photoPreview ? 'Cambiar foto' : 'Subir foto'}
+                  </button>
+                  {photoPreview && (
+                    <button type="button" className="btn" style={{ fontSize: 12, padding: '4px 12px', background: '#FEE2E2', color: '#DC2626', border: 'none' }}
+                      onClick={() => { setPhotoPreview(null); setPhotoBlob(null); setPhotoDeleted(true); }}>
+                      Eliminar foto
+                    </button>
+                  )}
+                </div>
                 {/* Input file oculto; se activa mediante el ref */}
                 <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
               </div>

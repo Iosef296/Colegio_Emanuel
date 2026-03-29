@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Icon from './Icon';
 
@@ -101,6 +101,7 @@ MOBILE_NAV.secretaria = MOBILE_NAV.admin;
 export default function Layout({ children }) {
   // Obtenemos el usuario autenticado y la función de cierre de sesión del contexto.
   const { user, logout } = useAuth();
+  const [lightbox, setLightbox] = useState(false);
 
   // Hook de React Router para redireccionar al login tras cerrar sesión.
   const navigate = useNavigate();
@@ -145,6 +146,17 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
+  const handleDownloadPhoto = async (e) => {
+    e.stopPropagation();
+    const proxyUrl = `https://colegio-emanuel-api.fly.dev/api/download?url=${encodeURIComponent(user.photo_url)}`;
+    const a = document.createElement('a');
+    a.href = proxyUrl;
+    a.download = 'foto-perfil.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   // Etiquetas legibles en español para cada rol, usadas en el sidebar.
   const roleLabel = { padre: 'Alumno', docente: 'Docente', admin: 'Administrador', auxiliar: 'Auxiliar', director: 'Director', secretaria: 'Secretaria' };
 
@@ -176,7 +188,7 @@ export default function Layout({ children }) {
         <div className="sidebar-footer">
           {/* Bloque de perfil: muestra foto (si existe en R2) o icono de usuario */}
           <div className="sidebar-user">
-            <div className="sidebar-user-avatar" style={{ overflow: 'hidden', padding: 0 }}>
+            <div className="sidebar-user-avatar" style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }} onClick={() => setLightbox(true)}>
               {user?.photo_url
                 ? <img src={user.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <Icon name="user" color="white" size={18} />
@@ -204,6 +216,20 @@ export default function Layout({ children }) {
       {/* ── Bottom nav (solo móvil) ───────────────────────────────────────────
           Barra inferior fija con los enlaces más importantes del rol.
           Incluye al final un botón de "Salir" para cerrar sesión desde móvil. */}
+      {lightbox && (
+        <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16, gap: 16 }}>
+          {user?.photo_url
+            ? <img src={user.photo_url} alt="Foto" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 8 }} />
+            : <Icon name="user" color="white" size={100} />
+          }
+          {user?.photo_url && (
+            <button onClick={handleDownloadPhoto} style={{ background: 'white', color: '#1E3A5F', padding: '10px 24px', borderRadius: 8, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              Descargar foto
+            </button>
+          )}
+        </div>
+      )}
+
       <nav className="bottom-nav">
         {mobileItems.map(item => (
           <NavLink

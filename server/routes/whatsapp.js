@@ -117,7 +117,7 @@ router.post('/send-reminder', async (req, res) => {
     : `🔔 *Colegio Emanuel*\n\nRecordatorio: la mensualidad de *${studentName}* (${month || 'este mes'}) vence en *${daysNum} día${daysNum > 1 ? 's' : ''}*.\n\nMonto: ${amountStr}\n\nEvite inconvenientes pagando a tiempo.`;
 
   try {
-    // Encolar el mensaje en el util de WhatsApp (respeta el intervalo de 3 s entre mensajes).
+    // Encolar el mensaje en el util de WhatsApp (respeta el intervalo aleatorio de 8–20 s entre mensajes).
     await sendWhatsApp(phone, msg);
     // Devolver el teléfono y el mensaje enviado para que el admin pueda confirmar.
     res.json({ ok: true, phone, message: msg });

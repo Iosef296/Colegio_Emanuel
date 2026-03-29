@@ -76,9 +76,12 @@ router.put('/:id/eval-names', authorizeRoles('docente', 'admin'), async (req, re
 
 router.delete('/:id', authorizeRoles('admin'), async (req, res) => {
   try {
+    await pool.query('DELETE FROM grades WHERE teacher_course_id=?', [req.params.id]);
+    await pool.query('DELETE FROM daily_progress WHERE teacher_course_id=?', [req.params.id]);
     await pool.query('DELETE FROM teacher_courses WHERE id=?', [req.params.id]);
     res.json({ message: 'Asignación eliminada' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

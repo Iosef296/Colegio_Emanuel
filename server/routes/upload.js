@@ -6,7 +6,7 @@ import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authenticateToken);
-router.use(authorizeRoles('docente', 'admin', 'auxiliar'));
+router.use(authorizeRoles('docente', 'admin', 'auxiliar', 'director', 'secretaria'));
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 

@@ -168,9 +168,10 @@ async function initSecondarySchema() {
         student_id INT NOT NULL REFERENCES students(id),
         date DATE NOT NULL,
         status attendance_status NOT NULL,
-        turno VARCHAR(20) DEFAULT 'mañana',
+        turno VARCHAR(20) NOT NULL DEFAULT 'mañana',
+        tipo VARCHAR(10) NOT NULL DEFAULT 'entrada',
         updated_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE (student_id, date, turno)
+        UNIQUE (student_id, date, turno, tipo)
       );
 
       CREATE TABLE IF NOT EXISTS payments (
@@ -225,30 +226,89 @@ async function initSecondarySchema() {
 
       CREATE TABLE IF NOT EXISTS teacher_attendance (
         id SERIAL PRIMARY KEY,
-        teacher_id INT NOT NULL REFERENCES users(id),
+        teacher_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         date DATE NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'presente',
-        turno VARCHAR(20) DEFAULT 'mañana',
-        notes TEXT,
+        turno VARCHAR(20) NOT NULL DEFAULT 'mañana',
+        tipo VARCHAR(10) NOT NULL DEFAULT 'entrada',
+        status VARCHAR(20) NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(teacher_id, date, turno)
+        UNIQUE(teacher_id, date, turno, tipo)
       );
 
       CREATE TABLE IF NOT EXISTS whatsapp_auth (
-        id SERIAL PRIMARY KEY,
-        key_id VARCHAR(255) UNIQUE NOT NULL,
-        value JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS group_members (
-        id SERIAL PRIMARY KEY,
-        group_name VARCHAR(100) NOT NULL,
-        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(group_name, user_id)
+        group_id INTEGER REFERENCES grade_levels(id) ON DELETE CASCADE,
+        student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+        PRIMARY KEY (group_id, student_id)
       );
     `);
+
+    // Fix legacy schema mismatches (tables already created with wrong columns)
+    await secondaryPool.query(`
+      -- attendance: add tipo if missing, fix unique constraint
+      ALTER TABLE attendance ADD COLUMN IF NOT EXISTS tipo VARCHAR(10) NOT NULL DEFAULT 'entrada';
+      ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_student_id_date_turno_key;
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name='attendance_student_id_date_turno_tipo_key' AND table_name='attendance'
+        ) THEN
+          ALTER TABLE attendance ADD CONSTRAINT attendance_student_id_date_turno_tipo_key
+            UNIQUE (student_id, date, turno, tipo);
+        END IF;
+      END $$;
+
+      -- teacher_attendance: add tipo if missing, fix unique constraint
+      ALTER TABLE teacher_attendance ADD COLUMN IF NOT EXISTS tipo VARCHAR(10) NOT NULL DEFAULT 'entrada';
+      ALTER TABLE teacher_attendance DROP CONSTRAINT IF EXISTS teacher_attendance_teacher_id_date_turno_key;
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name='teacher_attendance_teacher_id_date_turno_tipo_key' AND table_name='teacher_attendance'
+        ) THEN
+          ALTER TABLE teacher_attendance ADD CONSTRAINT teacher_attendance_teacher_id_date_turno_tipo_key
+            UNIQUE (teacher_id, date, turno, tipo);
+        END IF;
+      END $$;
+    `).catch(err => console.warn('[DB] Schema fix warning:', err.message));
+
+    // Fix whatsapp_auth and group_members if they have wrong schema (drop only if empty)
+    await secondaryPool.query(`
+      DO $$
+      DECLARE cnt INT;
+      BEGIN
+        SELECT COUNT(*) INTO cnt FROM whatsapp_auth;
+        IF cnt = 0 AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='whatsapp_auth' AND column_name='key' AND data_type='text'
+            AND character_maximum_length IS NULL
+        ) THEN
+          DROP TABLE IF EXISTS whatsapp_auth;
+          CREATE TABLE whatsapp_auth (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        END IF;
+      END $$;
+
+      DO $$
+      DECLARE cnt INT;
+      BEGIN
+        SELECT COUNT(*) INTO cnt FROM group_members;
+        IF cnt = 0 AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='group_members' AND column_name='group_id'
+        ) THEN
+          DROP TABLE IF EXISTS group_members;
+          CREATE TABLE group_members (
+            group_id INTEGER REFERENCES grade_levels(id) ON DELETE CASCADE,
+            student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+            PRIMARY KEY (group_id, student_id)
+          );
+        END IF;
+      END $$;
+    `).catch(err => console.warn('[DB] Table rebuild warning:', err.message));
 
     // Indexes
     await secondaryPool.query(`

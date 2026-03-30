@@ -112,6 +112,10 @@ export default function AuxiliarAsistencia() {
   // actualmente solo se usa para mostrar referencia visual al auxiliar).
   const [tardeHasta, setTardeHasta] = useState(defaultTarde);
 
+  // Controla qué niveles están expandidos en el selector de grados
+  const [openLevels, setOpenLevels] = useState({});
+  const toggleLevel = (lvl) => setOpenLevels(prev => ({ ...prev, [lvl]: !prev[lvl] }));
+
   // --- Referencias para el escáner QR ---
 
   // Referencia al elemento <video> que muestra el feed de la cámara.
@@ -572,29 +576,42 @@ export default function AuxiliarAsistencia() {
             <div style={{ marginBottom: 12 }}>
               {grouped.map(({ lvl, list }) => {
                 const lc = LEVEL_COLOR[lvl];
+                const isOpen = !!openLevels[lvl];
+                const hasSelected = list.some(g => g.id === selectedGrade);
                 return (
-                  <div key={lvl} style={{ marginBottom: 8 }}>
-                    {/* Etiqueta del nivel */}
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20, display: 'inline-block', marginBottom: 6 }}>
-                      {lvl.toUpperCase()}
-                    </span>
-                    {/* Pestañas de grados de este nivel */}
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {list.map(g => (
-                        <button
-                          key={g.id}
-                          onClick={() => setSelectedGrade(g.id)}
-                          style={{
-                            padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${selectedGrade === g.id ? 'transparent' : lc.border}`,
-                            cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-                            background: selectedGrade === g.id ? 'var(--primary)' : 'white',
-                            color: selectedGrade === g.id ? 'white' : lc.color,
-                          }}
-                        >
-                          {g.name}{g.section ? ` ${g.section}` : ''}
-                        </button>
-                      ))}
-                    </div>
+                  <div key={lvl} style={{ marginBottom: 6 }}>
+                    {/* Header clickeable del nivel */}
+                    <button
+                      onClick={() => toggleLevel(lvl)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 6 : 0 }}
+                    >
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20 }}>
+                        {lvl.toUpperCase()}
+                        {hasSelected && !isOpen && <span style={{ marginLeft: 5 }}>·</span>}
+                      </span>
+                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>
+                        {isOpen ? '▲' : '▼'}
+                      </span>
+                    </button>
+                    {/* Pestañas de grados — solo visibles si está abierto */}
+                    {isOpen && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {list.map(g => (
+                          <button
+                            key={g.id}
+                            onClick={() => setSelectedGrade(g.id)}
+                            style={{
+                              padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${selectedGrade === g.id ? 'transparent' : lc.border}`,
+                              cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+                              background: selectedGrade === g.id ? 'var(--primary)' : 'white',
+                              color: selectedGrade === g.id ? 'white' : lc.color,
+                            }}
+                          >
+                            {g.name}{g.section ? ` ${g.section}` : ''}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

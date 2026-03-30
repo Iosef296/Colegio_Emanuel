@@ -209,6 +209,9 @@ export default function DocenteAttendance() {
     return acc;
   }, []);
 
+  const [openLevels, setOpenLevels] = useState({});
+  const toggleLevel = (lvl) => setOpenLevels(prev => ({ ...prev, [lvl]: !prev[lvl] }));
+
   if (loading) return <div className="loading">Cargando...</div>;
 
   return (
@@ -247,18 +250,22 @@ export default function DocenteAttendance() {
 
         {grouped.map(({ level, students: lvlStudents }) => {
           const lc = LEVEL_COLOR[level];
+          const isOpen = !!openLevels[level];
           return (
             <div key={level}>
-              {/* Separador de nivel */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, marginTop: 6 }}>
+              {/* Separador de nivel clickeable */}
+              <button
+                onClick={() => toggleLevel(level)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: isOpen ? 10 : 6, marginTop: 6, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              >
                 <div style={{ flex: 1, height: 1, background: lc.border }} />
                 <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '3px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                  {level.toUpperCase()} · {lvlStudents.length} alumno{lvlStudents.length !== 1 ? 's' : ''}
+                  {level.toUpperCase()} · {lvlStudents.length} alumno{lvlStudents.length !== 1 ? 's' : ''} {isOpen ? '▲' : '▼'}
                 </span>
                 <div style={{ flex: 1, height: 1, background: lc.border }} />
-              </div>
+              </button>
 
-              {lvlStudents.map(s => {
+              {isOpen && lvlStudents.map(s => {
                 const status = records[s.id] || 'temprano';
                 const info = statusInfo[status];
                 return (

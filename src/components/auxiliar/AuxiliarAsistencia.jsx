@@ -501,39 +501,47 @@ export default function AuxiliarAsistencia() {
 
   return (
     <div>
-      {/* Encabezado de página con título y botón para abrir el escáner QR */}
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1>Asistencia</h1>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Asistencia
+              <span style={{
+                background: activeTurno === 'mañana' ? '#FEF3C7' : '#EDE9FE',
+                color: activeTurno === 'mañana' ? '#92400E' : '#5B21B6',
+                fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, letterSpacing: 0.5,
+              }}>
+                {activeTurno === 'mañana' ? 'MAÑANA' : 'TARDE'}
+              </span>
+            </h1>
             <p>Registro automático por QR</p>
           </div>
-          <button onClick={startScanner} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px' }}>
-            <Icon name="qr" color="white" size={18} />
+          <button onClick={startScanner} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 12 }}>
+            <Icon name="qr" color="white" size={20} />
             Escanear
           </button>
         </div>
       </div>
 
       <div className="content-area">
-        {/* Pestañas de fecha: permite al auxiliar cambiar entre días registrados.
-            Incluye botón "×" para eliminar fechas y la opción de agregar una nueva. */}
-        <div style={{ marginBottom: 12 }}>
+
+        {/* Date tabs */}
+        <div style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, alignItems: 'center' }}>
             {dates.map(d => (
               <div key={d} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
                 <button
                   onClick={() => setActiveDate(d)}
                   style={{
-                    padding: '7px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-                    background: activeDate === d ? 'var(--primary)' : 'var(--bg)',
+                    padding: '7px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                    background: activeDate === d ? 'var(--primary)' : 'white',
                     color: activeDate === d ? 'white' : 'var(--text-secondary)',
+                    boxShadow: activeDate === d ? '0 2px 8px rgba(30,58,95,0.3)' : '0 1px 3px rgba(0,0,0,0.08)',
                   }}
                 >
                   {d === today ? 'Hoy' : formatDateLabel(d)}
                 </button>
-                {/* Botón de eliminación de pestaña; solo visible si hay más de una fecha */}
                 {dates.length > 1 && (
                   <button
                     onClick={() => removeDate(d)}
@@ -544,35 +552,46 @@ export default function AuxiliarAsistencia() {
                 )}
               </div>
             ))}
-            {/* Formulario inline para agregar una fecha pasada o futura */}
             {showAddDate ? (
               <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
-                <input
-                  type="date"
-                  value={newDateInput}
-                  onChange={e => setNewDateInput(e.target.value)}
-                  className="form-input"
-                  style={{ padding: '5px 8px', fontSize: 12, width: 140 }}
-                />
+                <input type="date" value={newDateInput} onChange={e => setNewDateInput(e.target.value)} className="form-input" style={{ padding: '5px 8px', fontSize: 12, width: 140 }} />
                 <button onClick={addDate} className="btn btn-primary" style={{ padding: '5px 12px', fontSize: 12 }}>OK</button>
                 <button onClick={() => setShowAddDate(false)} className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }}>×</button>
               </div>
-            ) : null}
+            ) : (
+              <button
+                onClick={() => setShowAddDate(true)}
+                style={{
+                  flexShrink: 0, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
+                  fontSize: 11, fontWeight: 700, border: '1.5px dashed var(--border)',
+                  background: 'white', color: 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                + fecha
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Pestañas Entrada / Salida: definen el tipo de registro activo.
-            Cada tipo usa un conjunto de estados diferente (temprano/tarde/falta vs. salida/falta). */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {[['entrada', 'Entrada'], ['salida', 'Salida']].map(([val, label]) => (
+        {/* Entrada / Salida segmented control */}
+        <div style={{
+          display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: 4,
+          marginBottom: 16, gap: 2, boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.07)',
+        }}>
+          {[
+            { val: 'entrada', label: 'Entrada', activeColor: '#059669' },
+            { val: 'salida',  label: 'Salida',  activeColor: '#D97706' },
+          ].map(({ val, label, activeColor }) => (
             <button
               key={val}
               onClick={() => setActiveTipo(val)}
               style={{
-                flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                flex: 1, padding: '9px 8px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
-                background: activeTipo === val ? 'var(--primary)' : 'var(--bg)',
-                color: activeTipo === val ? 'white' : 'var(--text-secondary)',
+                background: activeTipo === val ? 'white' : 'transparent',
+                color: activeTipo === val ? activeColor : 'var(--text-muted)',
+                boxShadow: activeTipo === val ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
               }}
             >
               {label}
@@ -580,10 +599,9 @@ export default function AuxiliarAsistencia() {
           ))}
         </div>
 
-        {/* Pestañas de grado agrupadas por nivel (Inicial / Primaria / Secundaria / Otros).
-            Cada nivel muestra una etiqueta separadora y sus grados como pestañas. */}
+        {/* Level accordion sections */}
         {(() => {
-          const getLevel = (name = '') => {
+          const getLvl = (name = '') => {
             const n = name.toLowerCase();
             if (n.includes('inicial'))    return 'Inicial';
             if (n.includes('primaria'))   return 'Primaria';
@@ -592,121 +610,155 @@ export default function AuxiliarAsistencia() {
           };
           const LEVEL_ORDER = ['Inicial', 'Primaria', 'Secundaria', 'Otros'];
           const LEVEL_COLOR = {
-            Inicial:    { color: '#92400E', bg: '#FEF3C7', border: '#FCD34D' },
-            Primaria:   { color: '#1E40AF', bg: '#DBEAFE', border: '#93C5FD' },
-            Secundaria: { color: '#065F46', bg: '#D1FAE5', border: '#6EE7B7' },
-            Otros:      { color: '#5B21B6', bg: '#EDE9FE', border: '#C4B5FD' },
+            Inicial:    { color: '#92400E', bg: '#FFFBEB', border: '#FCD34D', accent: '#D97706' },
+            Primaria:   { color: '#1E40AF', bg: '#EFF6FF', border: '#93C5FD', accent: '#2563EB' },
+            Secundaria: { color: '#065F46', bg: '#F0FDF4', border: '#6EE7B7', accent: '#059669' },
+            Otros:      { color: '#5B21B6', bg: '#F5F3FF', border: '#C4B5FD', accent: '#7C3AED' },
           };
           const grouped = LEVEL_ORDER
-            .map(lvl => ({ lvl, list: grades.filter(g => getLevel(g.name) === lvl && students.some(s => s.grade_level_id === g.id)) }))
+            .map(lvl => ({ lvl, list: grades.filter(g => getLvl(g.name) === lvl && students.some(s => s.grade_level_id === g.id)) }))
             .filter(({ list }) => list.length > 0);
+          const docenteColor = { color: '#0F766E', bg: '#F0FDFA', border: '#5EEAD4', accent: '#0D9488' };
 
-          const docenteColor = { color: '#0F766E', bg: '#CCFBF1', border: '#5EEAD4' };
           return (
-            <div style={{ marginBottom: 12 }}>
-              {/* Sección DOCENTES — aparece primero */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+
+              {/* DOCENTES section */}
               {teachers.length > 0 && (() => {
                 const lc = docenteColor;
                 const isOpen = !!openLevels['docentes'];
                 const dayTR = teacherRecords[recordKey] || {};
+                const presentCount = teachers.filter(t => dayTR[t.id] && dayTR[t.id] !== 'falta').length;
                 return (
-                  <div style={{ marginBottom: 6 }}>
+                  <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${lc.border}`, background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                     <button
                       onClick={() => toggleLevel('docentes')}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 8 : 0 }}
+                      style={{
+                        width: '100%', border: 'none', padding: '12px 14px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                        background: isOpen ? lc.bg : 'white',
+                        borderLeft: `4px solid ${lc.accent}`,
+                        transition: 'background 0.15s',
+                      }}
                     >
-                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20 }}>
-                        DOCENTES
+                      <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, color: lc.color, flex: 1 }}>DOCENTES</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: lc.accent, background: lc.bg, padding: '2px 8px', borderRadius: 20, border: `1px solid ${lc.border}` }}>
+                        {presentCount}/{teachers.length}
                       </span>
-                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
+                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </button>
                     {isOpen && (() => {
                       const ds = levelSettings.docentes;
                       const counts = activeTipo === 'entrada' ? [
-                        { val: teachers.filter(t => dayTR[t.id] === 'temprano').length, label: 'Temprano',  color: 'var(--success)', bg: '#D1FAE5' },
-                        { val: teachers.filter(t => dayTR[t.id] === 'tarde').length,    label: 'Tardanzas', color: 'var(--warning)', bg: '#FEF3C7' },
-                        { val: teachers.filter(t => !dayTR[t.id] || dayTR[t.id] === 'falta').length, label: 'Faltas', color: 'var(--danger)', bg: '#FEE2E2' },
+                        { val: teachers.filter(t => dayTR[t.id] === 'temprano').length, label: 'Temprano',  color: '#059669', bg: '#D1FAE5' },
+                        { val: teachers.filter(t => dayTR[t.id] === 'tarde').length,    label: 'Tardanzas', color: '#D97706', bg: '#FEF3C7' },
+                        { val: teachers.filter(t => !dayTR[t.id] || dayTR[t.id] === 'falta').length, label: 'Faltas', color: '#DC2626', bg: '#FEE2E2' },
                         { val: teachers.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
                       ] : [
-                        { val: teachers.filter(t => dayTR[t.id] === 'salida').length, label: 'Salieron',   color: 'var(--primary)', bg: '#DBEAFE' },
+                        { val: teachers.filter(t => dayTR[t.id] === 'salida').length, label: 'Salieron',   color: '#2563EB', bg: '#DBEAFE' },
                         { val: teachers.filter(t => !dayTR[t.id] || dayTR[t.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
                         { val: teachers.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
                       ];
-                      return (<>
-                        {/* Horarios de corte propios de Docentes */}
-                        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                          <div style={{ flex: 1 }}>
-                            <label className="form-label" style={{ fontSize: 10 }}>Temprano hasta ({to12h(ds.temprano)})</label>
-                            <input type="time" className="form-input" style={{ padding: '5px 8px', fontSize: 12 }} value={ds.temprano} onChange={e => updateLevelSetting('docentes', 'temprano', e.target.value)} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <label className="form-label" style={{ fontSize: 10 }}>Tarde hasta ({to12h(ds.tarde)})</label>
-                            <input type="time" className="form-input" style={{ padding: '5px 8px', fontSize: 12 }} value={ds.tarde} onChange={e => updateLevelSetting('docentes', 'tarde', e.target.value)} />
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                          {counts.map((item, i) => (
-                            <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
-                              <p style={{ fontSize: 22, fontWeight: 800, color: item.color }}>{item.val}</p>
-                              <p style={{ fontSize: 10, color: item.color, fontWeight: 600 }}>{item.label}</p>
+                      return (
+                        <div style={{ padding: '12px 14px', borderTop: `1px solid ${lc.border}` }}>
+                          <div style={{ background: lc.bg, borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 10, marginBottom: 12, border: `1px solid ${lc.border}` }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>Temprano hasta</label>
+                              <input type="time" className="form-input" style={{ padding: '5px 8px', fontSize: 12 }} value={ds.temprano} onChange={e => updateLevelSetting('docentes', 'temprano', e.target.value)} />
                             </div>
-                          ))}
-                        </div>
-                        {teachers.map(t => {
-                          const status = dayTR[t.id] ?? 'falta';
-                          const info = (activeTipo === 'salida' && status === 'falta')
-                            ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
-                            : statusInfo[status];
-                          return (
-                            <div key={t.id} className="card" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                              <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
-                              <button
-                                onClick={() => toggleTeacherStatus(t.id)}
-                                style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                              >
-                                {info.label}
-                              </button>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>Tarde hasta</label>
+                              <input type="time" className="form-input" style={{ padding: '5px 8px', fontSize: 12 }} value={ds.tarde} onChange={e => updateLevelSetting('docentes', 'tarde', e.target.value)} />
                             </div>
-                          );
-                        })}
-                      </>);
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                            {counts.map((item, i) => (
+                              <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 10, padding: '10px 6px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                <p style={{ fontSize: 22, fontWeight: 800, color: item.color, lineHeight: 1 }}>{item.val}</p>
+                                <p style={{ fontSize: 10, color: item.color, fontWeight: 600, marginTop: 2 }}>{item.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {teachers.map(t => {
+                            const status = dayTR[t.id] ?? 'falta';
+                            const info = (activeTipo === 'salida' && status === 'falta')
+                              ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                              : statusInfo[status];
+                            const initials = t.full_name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                            return (
+                              <div key={t.id} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'var(--bg)', borderRadius: 10, padding: '10px 12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                  <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: lc.bg, border: `2px solid ${lc.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: lc.color }}>
+                                    {initials}
+                                  </div>
+                                  <p style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.full_name}</p>
+                                </div>
+                                <button onClick={() => toggleTeacherStatus(t.id)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                                  {info.label}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
                     })()}
                   </div>
                 );
               })()}
 
+              {/* Grade level sections */}
               {grouped.map(({ lvl, list }) => {
                 const lc = LEVEL_COLOR[lvl];
                 const isOpen = !!openLevels[lvl];
                 const hasSelected = list.some(g => g.id === selectedGrade);
+                const levelStudentIds = students.filter(s => list.some(g => g.id === s.grade_level_id)).map(s => s.id);
+                const presentCount = levelStudentIds.filter(id => {
+                  const st = (records[recordKey] || {})[id];
+                  return st && st !== 'falta';
+                }).length;
                 return (
-                  <div key={lvl} style={{ marginBottom: 6 }}>
+                  <div key={lvl} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${lc.border}`, background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                     <button
                       onClick={() => toggleLevel(lvl)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 6 : 0 }}
+                      style={{
+                        width: '100%', border: 'none', padding: '12px 14px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                        background: (isOpen || hasSelected) ? lc.bg : 'white',
+                        borderLeft: `4px solid ${lc.accent}`,
+                        transition: 'background 0.15s',
+                      }}
                     >
-                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, color: lc.color, flex: 1 }}>
                         {lvl.toUpperCase()}
-                        {hasSelected && !isOpen && <span style={{ marginLeft: 5 }}>·</span>}
+                        {hasSelected && !isOpen && (
+                          <span style={{ marginLeft: 8, fontSize: 10, background: lc.accent, color: 'white', borderRadius: 20, padding: '1px 6px', fontWeight: 700 }}>activo</span>
+                        )}
                       </span>
-                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: lc.accent, background: lc.bg, padding: '2px 8px', borderRadius: 20, border: `1px solid ${lc.border}` }}>
+                        {presentCount}/{levelStudentIds.length}
+                      </span>
+                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </button>
                     {isOpen && (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {list.map(g => (
-                          <button
-                            key={g.id}
-                            onClick={() => setSelectedGrade(selectedGrade === g.id ? null : g.id)}
-                            style={{
-                              padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${selectedGrade === g.id ? 'transparent' : lc.border}`,
-                              cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-                              background: selectedGrade === g.id ? 'var(--primary)' : 'white',
-                              color: selectedGrade === g.id ? 'white' : lc.color,
-                            }}
-                          >
-                            {g.name}{g.section ? ` ${g.section}` : ''}
-                          </button>
-                        ))}
+                      <div style={{ padding: '10px 14px', borderTop: `1px solid ${lc.border}` }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {list.map(g => (
+                            <button
+                              key={g.id}
+                              onClick={() => setSelectedGrade(selectedGrade === g.id ? null : g.id)}
+                              style={{
+                                padding: '7px 16px', borderRadius: 20, cursor: 'pointer',
+                                fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                                border: `2px solid ${selectedGrade === g.id ? 'transparent' : lc.border}`,
+                                background: selectedGrade === g.id ? lc.accent : 'white',
+                                color: selectedGrade === g.id ? 'white' : lc.color,
+                                boxShadow: selectedGrade === g.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                              }}
+                            >
+                              {g.name}{g.section ? ` ${g.section}` : ''}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -717,108 +769,102 @@ export default function AuxiliarAsistencia() {
           );
         })()}
 
-        {/* Contadores y lista solo aparecen cuando hay un grado seleccionado */}
+        {/* Student section: only shown when a grade is selected */}
         {selectedGrade !== null && <>
 
-        {/* Horarios de corte del nivel del grado seleccionado */}
-        {(() => {
-          const selectedGradeObj = grades.find(g => g.id === selectedGrade);
-          const level = getLevel(selectedGradeObj?.name || '');
-          const ls = levelSettings[level] || levelSettings.primaria;
-          return (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label className="form-label" style={{ fontSize: 10 }}>Temprano hasta — {level.charAt(0).toUpperCase() + level.slice(1)} ({to12h(ls.temprano)})</label>
-                <input type="time" className="form-input" value={ls.temprano} onChange={e => updateLevelSetting(level, 'temprano', e.target.value)} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="form-label" style={{ fontSize: 10 }}>Tarde hasta ({to12h(ls.tarde)})</label>
-                <input type="time" className="form-input" value={ls.tarde} onChange={e => updateLevelSetting(level, 'tarde', e.target.value)} />
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Contadores de resumen del grado seleccionado para el contexto actual.
-            En modo "entrada" muestra: Temprano / Tardanzas / Faltas / Total.
-            En modo "salida" muestra: Salieron / Pendientes / Total. */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {(activeTipo === 'entrada' ? [
-            { val: gradeStudents.filter(s => dayRecords[s.id] === 'temprano').length, label: 'Temprano', color: 'var(--success)', bg: '#D1FAE5' },
-            { val: gradeStudents.filter(s => dayRecords[s.id] === 'tarde').length, label: 'Tardanzas', color: 'var(--warning)', bg: '#FEF3C7' },
-            { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Faltas', color: 'var(--danger)', bg: '#FEE2E2' },
-            { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
-          ] : [
-            { val: gradeStudents.filter(s => dayRecords[s.id] === 'salida').length, label: 'Salieron', color: 'var(--primary)', bg: '#DBEAFE' },
-            { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
-            { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
-          ]).map((item, i) => (
-            <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
-              <p style={{ fontSize: 22, fontWeight: 800, color: item.color }}>{item.val}</p>
-              <p style={{ fontSize: 10, color: item.color, fontWeight: 600 }}>{item.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Instrucción contextual para que el auxiliar sepa que puede cambiar el
-            estado tocando la pastilla de cada alumno. */}
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-          Toca el estado para cambiar manualmente
-        </p>
-
-        {/* Lista de alumnos del grado seleccionado.
-            Cada fila muestra el nombre y un botón con el estado actual.
-            Al tocar el botón se rota el estado mediante toggleStatus(). */}
-        {gradeStudents.length === 0 ? (
-          <div className="empty-state"><p>No hay alumnos en este grado</p></div>
-        ) : (
-          gradeStudents.map(s => {
-            const status = dayRecords[s.id] ?? 'falta';
-            // En modo salida, si el estado es "falta" se muestra "Pendiente" en lugar
-            // de "Falta" para distinguir semánticamente entre ausencia y aún no salió.
-            const info = (activeTipo === 'salida' && status === 'falta')
-              ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
-              : statusInfo[status];
+          {/* Per-level time settings */}
+          {(() => {
+            const selectedGradeObj = grades.find(g => g.id === selectedGrade);
+            const level = getLevel(selectedGradeObj?.name || '');
+            const ls = levelSettings[level] || levelSettings.primaria;
+            const LC = {
+              inicial:    { color: '#92400E', bg: '#FFFBEB', border: '#FCD34D' },
+              primaria:   { color: '#1E40AF', bg: '#EFF6FF', border: '#93C5FD' },
+              secundaria: { color: '#065F46', bg: '#F0FDF4', border: '#6EE7B7' },
+              otros:      { color: '#5B21B6', bg: '#F5F3FF', border: '#C4B5FD' },
+            };
+            const lc = LC[level] || LC.primaria;
             return (
-              <div key={s.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                  {/* Avatar genérico con icono de usuario */}
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon name="user" color="var(--text-muted)" size={18} />
-                  </div>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>{s.first_name} {s.last_name}</p>
+              <div style={{ background: lc.bg, borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 10, marginBottom: 12, border: `1px solid ${lc.border}` }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>
+                    Temprano — {level.charAt(0).toUpperCase() + level.slice(1)}
+                  </label>
+                  <input type="time" className="form-input" value={ls.temprano} onChange={e => updateLevelSetting(level, 'temprano', e.target.value)} style={{ fontSize: 12, padding: '5px 8px' }} />
                 </div>
-                {/* Botón de estado: al tocarlo llama a toggleStatus para rotar al siguiente estado */}
-                <button
-                  onClick={() => toggleStatus(s.id)}
-                  style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                >
-                  {info.label}
-                </button>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>
+                    Tarde hasta
+                  </label>
+                  <input type="time" className="form-input" value={ls.tarde} onChange={e => updateLevelSetting(level, 'tarde', e.target.value)} style={{ fontSize: 12, padding: '5px 8px' }} />
+                </div>
               </div>
             );
-          })
-        )}
+          })()}
+
+          {/* Counters */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            {(activeTipo === 'entrada' ? [
+              { val: gradeStudents.filter(s => dayRecords[s.id] === 'temprano').length, label: 'Temprano', color: '#059669', bg: '#D1FAE5' },
+              { val: gradeStudents.filter(s => dayRecords[s.id] === 'tarde').length, label: 'Tardanzas', color: '#D97706', bg: '#FEF3C7' },
+              { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Faltas', color: '#DC2626', bg: '#FEE2E2' },
+              { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+            ] : [
+              { val: gradeStudents.filter(s => dayRecords[s.id] === 'salida').length, label: 'Salieron', color: '#2563EB', bg: '#DBEAFE' },
+              { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
+              { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+            ]).map((item, i) => (
+              <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 10, padding: '10px 6px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                <p style={{ fontSize: 22, fontWeight: 800, color: item.color, lineHeight: 1 }}>{item.val}</p>
+                <p style={{ fontSize: 10, color: item.color, fontWeight: 600, marginTop: 2 }}>{item.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+            Toca el estado para cambiar manualmente
+          </p>
+
+          {gradeStudents.length === 0 ? (
+            <div className="empty-state"><p>No hay alumnos en este grado</p></div>
+          ) : (
+            gradeStudents.map(s => {
+              const status = dayRecords[s.id] ?? 'falta';
+              const info = (activeTipo === 'salida' && status === 'falta')
+                ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                : statusInfo[status];
+              const initials = `${(s.first_name || '')[0] || ''}${(s.last_name || '')[0] || ''}`.toUpperCase();
+              const avatarBg    = status === 'temprano' ? '#D1FAE5' : status === 'tarde' ? '#FEF3C7' : status === 'salida' ? '#DBEAFE' : '#F3F4F6';
+              const avatarColor = status === 'temprano' ? '#059669' : status === 'tarde' ? '#D97706' : status === 'salida' ? '#2563EB' : '#9CA3AF';
+              return (
+                <div key={s.id} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'white', borderRadius: 12, padding: '10px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: avatarColor, transition: 'all 0.2s' }}>
+                      {initials}
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.first_name} {s.last_name}</p>
+                  </div>
+                  <button onClick={() => toggleStatus(s.id)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                    {info.label}
+                  </button>
+                </div>
+              );
+            })
+          )}
         </>}
 
       </div>
 
-      {/* Modal del escáner QR: ocupa toda la pantalla con fondo oscuro.
-          Muestra el feed de la cámara en un recuadro con marcas de esquina
-          y el mensaje de retroalimentación del último QR procesado. */}
+      {/* QR Scanner modal */}
       {showScanner && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <p style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>Escanear QR del alumno o docente</p>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
             {activeDate === today ? 'Hoy' : formatDateLabel(activeDate)} · {activeTipo === 'entrada' ? 'Entrada' : 'Salida'}
           </p>
-          {/* Contenedor del video con decoraciones de esquina (estilo visor de QR) */}
           <div style={{ position: 'relative', width: 280, height: 280, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--primary)' }}>
             <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} playsInline muted />
-            {/* Canvas oculto usado por jsQR para analizar los frames cuando
-                BarcodeDetector no está disponible en el navegador */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
-            {/* Marcas de esquina decorativas que guían al usuario a centrar el QR */}
             {[0, 1, 2, 3].map(i => (
               <div key={i} style={{
                 position: 'absolute', width: 28, height: 28,
@@ -829,13 +875,11 @@ export default function AuxiliarAsistencia() {
               }} />
             ))}
           </div>
-          {/* Mensaje de confirmación temporal tras escanear un QR válido */}
           {scanMsg && (
             <div style={{ background: '#D1FAE5', color: '#065F46', padding: '10px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700 }}>
               {scanMsg}
             </div>
           )}
-          {/* Botón para cerrar el escáner manualmente */}
           <button onClick={stopScanner} className="btn btn-secondary" style={{ minWidth: 160 }}>
             Cerrar escáner
           </button>

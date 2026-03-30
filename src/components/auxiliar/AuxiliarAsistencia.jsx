@@ -101,16 +101,18 @@ export default function AuxiliarAsistencia() {
   // (ej. "✓ Juan Pérez — Temprano"). Se limpia automáticamente a los 3 segundos.
   const [scanMsg, setScanMsg] = useState('');
 
-  // Horas límite configurables para clasificar la asistencia como "Temprano".
-  // Se inicializan con valores predeterminados según el turno y se persisten
-  // en la tabla de settings del servidor.
-  const defaultTemprano = activeTurno === 'mañana' ? '07:30' : '13:00';
-  const defaultTarde    = activeTurno === 'mañana' ? '08:00' : '13:30';
-  const [tempranoHasta, setTempranoHasta] = useState(defaultTemprano);
-
-  // Hora límite para clasificar como "Tarde" (se guarda en settings pero
-  // actualmente solo se usa para mostrar referencia visual al auxiliar).
-  const [tardeHasta, setTardeHasta] = useState(defaultTarde);
+  // Horas de corte independientes por nivel. Cada nivel tiene su propio par
+  // temprano/tarde que se persiste en settings con clave att_{field}_{turno}_{level}.
+  const defT = activeTurno === 'mañana' ? '07:30' : '13:00';
+  const defD = activeTurno === 'mañana' ? '08:00' : '13:30';
+  const makeDefault = () => ({ temprano: defT, tarde: defD });
+  const [levelSettings, setLevelSettings] = useState({
+    docentes:   makeDefault(),
+    inicial:    makeDefault(),
+    primaria:   makeDefault(),
+    secundaria: makeDefault(),
+    otros:      makeDefault(),
+  });
 
   // Controla qué niveles están expandidos en el selector de grados
   const [openLevels, setOpenLevels] = useState({});
@@ -149,30 +151,46 @@ export default function AuxiliarAsistencia() {
   // poder removerla correctamente cuando el escáner se cierra.
   const popstateHandlerRef = useRef(null);
 
-  // Referencias "espejo" de los estados volátiles usados dentro del callback
-  // de animación. Como scanFrame y handleDetected se memorizan con useCallback,
-  // necesitan leer el valor más reciente sin recrearse en cada render.
-  const tempranoRef = useRef(tempranoHasta);
-  const activeDateRef = useRef(activeDate);
-  const activeTurnoRef = useRef(activeTurno);
-  const activeTipoRef = useRef(activeTipo);
+  // Referencias espejo para callbacks memorizados.
+  const levelSettingsRef = useRef(levelSettings);
+  const gradesRef        = useRef([]);
+  const activeDateRef    = useRef(activeDate);
+  const activeTurnoRef   = useRef(activeTurno);
+  const activeTipoRef    = useRef(activeTipo);
 
-  // Mantiene sincronizadas las referencias de valores volátiles con el estado
-  // actual. Esto permite que el loop de animación siempre use el valor vigente
-  // sin necesidad de recrear los callbacks en cada render.
-  useEffect(() => { tempranoRef.current = tempranoHasta; }, [tempranoHasta]);
+  useEffect(() => { levelSettingsRef.current = levelSettings; }, [levelSettings]);
   useEffect(() => { activeDateRef.current = activeDate; }, [activeDate]);
   useEffect(() => { activeTurnoRef.current = activeTurno; }, [activeTurno]);
   useEffect(() => { activeTipoRef.current = activeTipo; }, [activeTipo]);
 
-  // Carga la configuración de horarios guardada en el servidor al montar el
-  // componente. Las claves en settings tienen la forma "att_temprano_mañana",
-  // "att_tarde_tarde", etc. Si existen, sobreescriben los valores predeterminados
-  // para que el auxiliar vea sus ajustes previos al abrir la pantalla.
+  // Detecta el nivel a partir del nombre del grado (igual que en la agrupación visual).
+  const getLevel = (name = '') => {
+    const n = name.toLowerCase();
+    if (n.includes('inicial'))    return 'inicial';
+    if (n.includes('primaria'))   return 'primaria';
+    if (n.includes('secundaria')) return 'secundaria';
+    return 'otros';
+  };
+
+  // Actualiza el horario de corte de un nivel y lo persiste en el servidor.
+  const updateLevelSetting = (level, field, value) => {
+    setLevelSettings(prev => ({ ...prev, [level]: { ...prev[level], [field]: value } }));
+    api.put('/settings', { [`att_${field}_${activeTurno}_${level}`]: value }).catch(() => {});
+  };
+
+  // Carga configuración por nivel al montar. Fallback al valor global si el nivel-específico no existe.
   useEffect(() => {
     api.get('/settings').then(s => {
-      if (s[`att_temprano_${activeTurno}`]) setTempranoHasta(s[`att_temprano_${activeTurno}`]);
-      if (s[`att_tarde_${activeTurno}`]) setTardeHasta(s[`att_tarde_${activeTurno}`]);
+      setLevelSettings(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(lvl => {
+          const t = s[`att_temprano_${activeTurno}_${lvl}`] || s[`att_temprano_${activeTurno}`];
+          const d = s[`att_tarde_${activeTurno}_${lvl}`]    || s[`att_tarde_${activeTurno}`];
+          if (t) updated[lvl] = { ...updated[lvl], temprano: t };
+          if (d) updated[lvl] = { ...updated[lvl], tarde: d };
+        });
+        return updated;
+      });
     }).catch(() => {});
   }, []);
 
@@ -191,6 +209,7 @@ export default function AuxiliarAsistencia() {
       api.get('/teacher-attendance'),
     ]).then(([gls, studs, att, usrs, tAtt]) => {
         setGrades(gls);
+        gradesRef.current = gls;
         setStudents(studs);
         setTeachers(usrs);
         // No auto-seleccionar: el usuario elige el grado o docentes manualmente.
@@ -289,7 +308,8 @@ export default function AuxiliarAsistencia() {
       // Captura la hora actual y la clasifica según el límite de "temprano".
       const now = new Date();
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const status = currentTime <= tempranoRef.current ? 'temprano' : 'tarde';
+      const threshold = levelSettingsRef.current.docentes.temprano;
+      const status = currentTime <= threshold ? 'temprano' : 'tarde';
       // Registra la asistencia del docente en el endpoint específico.
       api.post('/teacher-attendance', {
         teacher_id: teacher.id,
@@ -308,9 +328,16 @@ export default function AuxiliarAsistencia() {
     scannedRef.current.add(rawValue);
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    // Para salida el estado es siempre "salida"; para entrada se clasifica
-    // según si la hora actual supera o no el límite de "temprano".
-    const status = activeTipoRef.current === 'salida' ? 'salida' : (currentTime <= tempranoRef.current ? 'temprano' : 'tarde');
+    // Determina el umbral según el nivel del alumno
+    const studentGrade = gradesRef.current.find(g => g.id === student.grade_level_id);
+    const studentLevel = studentGrade
+      ? (studentGrade.name.toLowerCase().includes('inicial') ? 'inicial'
+        : studentGrade.name.toLowerCase().includes('primaria') ? 'primaria'
+        : studentGrade.name.toLowerCase().includes('secundaria') ? 'secundaria'
+        : 'otros')
+      : 'primaria';
+    const threshold = levelSettingsRef.current[studentLevel]?.temprano || levelSettingsRef.current.primaria.temprano;
+    const status = activeTipoRef.current === 'salida' ? 'salida' : (currentTime <= threshold ? 'temprano' : 'tarde');
     const key = `${activeDateRef.current}__${activeTurnoRef.current}__${activeTipoRef.current}`;
     // Actualiza el estado local de forma inmediata para dar retroalimentación visual.
     setRecords(prev => ({
@@ -552,33 +579,6 @@ export default function AuxiliarAsistencia() {
           ))}
         </div>
 
-        {/* Configuración de horarios de corte.
-            "Temprano hasta" es el límite que determina si un alumno llegó temprano.
-            Cualquier hora posterior a ese límite (y antes del cierre) se clasifica como "Tarde".
-            Los valores se persisten inmediatamente en el servidor al cambiarlos. */}
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label className="form-label">Temprano hasta ({to12h(tempranoHasta)})</label>
-              <input
-                type="time"
-                className="form-input"
-                value={tempranoHasta}
-                onChange={e => { setTempranoHasta(e.target.value); api.put('/settings', { [`att_temprano_${activeTurno}`]: e.target.value }).catch(() => {}); }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label className="form-label">Tarde hasta ({to12h(tardeHasta)})</label>
-              <input
-                type="time"
-                className="form-input"
-                value={tardeHasta}
-                onChange={e => { setTardeHasta(e.target.value); api.put('/settings', { [`att_tarde_${activeTurno}`]: e.target.value }).catch(() => {}); }}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Pestañas de grado agrupadas por nivel (Inicial / Primaria / Secundaria / Otros).
             Cada nivel muestra una etiqueta separadora y sus grados como pestañas. */}
         {(() => {
@@ -620,6 +620,7 @@ export default function AuxiliarAsistencia() {
                       <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
                     </button>
                     {isOpen && (() => {
+                      const ds = levelSettings.docentes;
                       const counts = activeTipo === 'entrada' ? [
                         { val: teachers.filter(t => dayTR[t.id] === 'temprano').length, label: 'Temprano',  color: 'var(--success)', bg: '#D1FAE5' },
                         { val: teachers.filter(t => dayTR[t.id] === 'tarde').length,    label: 'Tardanzas', color: 'var(--warning)', bg: '#FEF3C7' },
@@ -631,6 +632,17 @@ export default function AuxiliarAsistencia() {
                         { val: teachers.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
                       ];
                       return (<>
+                        {/* Horarios de corte propios de Docentes */}
+                        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                          <div style={{ flex: 1 }}>
+                            <label className="form-label" style={{ fontSize: 10 }}>Temprano hasta ({to12h(ds.temprano)})</label>
+                            <input type="time" className="form-input" style={{ padding: '5px 8px', fontSize: 12 }} value={ds.temprano} onChange={e => updateLevelSetting('docentes', 'temprano', e.target.value)} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label className="form-label" style={{ fontSize: 10 }}>Tarde hasta ({to12h(ds.tarde)})</label>
+                            <input type="time" className="form-input" style={{ padding: '5px 8px', fontSize: 12 }} value={ds.tarde} onChange={e => updateLevelSetting('docentes', 'tarde', e.target.value)} />
+                          </div>
+                        </div>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                           {counts.map((item, i) => (
                             <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
@@ -707,6 +719,25 @@ export default function AuxiliarAsistencia() {
         {/* Contadores y lista solo aparecen cuando hay un grado seleccionado */}
         {selectedGrade !== null && <>
 
+        {/* Horarios de corte del nivel del grado seleccionado */}
+        {(() => {
+          const selectedGradeObj = grades.find(g => g.id === selectedGrade);
+          const level = getLevel(selectedGradeObj?.name || '');
+          const ls = levelSettings[level] || levelSettings.primaria;
+          return (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label className="form-label" style={{ fontSize: 10 }}>Temprano hasta — {level.charAt(0).toUpperCase() + level.slice(1)} ({to12h(ls.temprano)})</label>
+                <input type="time" className="form-input" value={ls.temprano} onChange={e => updateLevelSetting(level, 'temprano', e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="form-label" style={{ fontSize: 10 }}>Tarde hasta ({to12h(ls.tarde)})</label>
+                <input type="time" className="form-input" value={ls.tarde} onChange={e => updateLevelSetting(level, 'tarde', e.target.value)} />
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Contadores de resumen del grado seleccionado para el contexto actual.
             En modo "entrada" muestra: Temprano / Tardanzas / Faltas / Total.
             En modo "salida" muestra: Salieron / Pendientes / Total. */}
@@ -778,7 +809,7 @@ export default function AuxiliarAsistencia() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <p style={{ color: 'white', fontSize: 15, fontWeight: 700 }}>Escanear QR del alumno o docente</p>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-            {activeDate === today ? 'Hoy' : formatDateLabel(activeDate)} · {activeTipo === 'entrada' ? `Entrada · Temprano hasta ${to12h(tempranoHasta)}` : 'Salida'}
+            {activeDate === today ? 'Hoy' : formatDateLabel(activeDate)} · {activeTipo === 'entrada' ? 'Entrada' : 'Salida'}
           </p>
           {/* Contenedor del video con decoraciones de esquina (estilo visor de QR) */}
           <div style={{ position: 'relative', width: 280, height: 280, borderRadius: 16, overflow: 'hidden', border: '3px solid var(--primary)' }}>

@@ -597,7 +597,7 @@ export default function AuxiliarAsistencia() {
             Otros:      { color: '#5B21B6', bg: '#EDE9FE', border: '#C4B5FD' },
           };
           const grouped = LEVEL_ORDER
-            .map(lvl => ({ lvl, list: grades.filter(g => getLevel(g.name) === lvl) }))
+            .map(lvl => ({ lvl, list: grades.filter(g => getLevel(g.name) === lvl && students.some(s => s.grade_level_id === g.id)) }))
             .filter(({ list }) => list.length > 0);
 
           const docenteColor = { color: '#0F766E', bg: '#CCFBF1', border: '#5EEAD4' };

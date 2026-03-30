@@ -176,32 +176,45 @@ export default function AuxiliarAsistencia() {
     }).catch(() => {});
   }, []);
 
+  // Registros de asistencia del personal (docentes y otros).
+  // Misma estructura que `records` pero indexado por teacher_id.
+  const [teacherRecords, setTeacherRecords] = useState({});
+
   // Carga inicial en paralelo de: grados, alumnos, registros de asistencia
-  // existentes y personal docente. Se hace en un solo Promise.all para reducir
-  // la latencia total de la pantalla.
-  // Los registros de asistencia se indexan en el objeto `existing` usando la
-  // clave compuesta "fecha__turno__tipo" para permitir consulta O(1) posterior.
+  // existentes, personal docente y registros de asistencia del personal.
   useEffect(() => {
-    Promise.all([api.get('/grade-levels'), api.get('/students'), api.get('/attendance'), api.get('/users/staff')])
-      .then(([gls, studs, att, usrs]) => {
+    Promise.all([
+      api.get('/grade-levels'),
+      api.get('/students'),
+      api.get('/attendance'),
+      api.get('/users/staff'),
+      api.get('/teacher-attendance'),
+    ]).then(([gls, studs, att, usrs, tAtt]) => {
         setGrades(gls);
         setStudents(studs);
         setTeachers(usrs);
-        // Selecciona automáticamente el primer grado si la lista no está vacía.
         if (gls.length) setSelectedGrade(gls[0].id);
-        // Construye el índice de registros existentes desde la respuesta del API.
         const existing = {};
         att.forEach(a => {
           const turno = a.turno || 'mañana';
           const tipo = a.tipo || 'entrada';
-          // Normaliza la fecha a cadena YYYY-MM-DD independientemente de si el
-          // servidor devuelve un string ISO o un objeto Date.
           const dateStr = (typeof a.date === 'string' ? a.date : a.date.toISOString()).slice(0, 10);
           const key = `${dateStr}__${turno}__${tipo}`;
           if (!existing[key]) existing[key] = {};
           existing[key][a.student_id] = a.status;
         });
         setRecords(existing);
+        // Indexar registros de asistencia del personal
+        const tExisting = {};
+        tAtt.forEach(a => {
+          const turno = a.turno || 'mañana';
+          const tipo = a.tipo || 'entrada';
+          const dateStr = (typeof a.date === 'string' ? a.date : a.date.toISOString()).slice(0, 10);
+          const key = `${dateStr}__${turno}__${tipo}`;
+          if (!tExisting[key]) tExisting[key] = {};
+          tExisting[key][a.teacher_id] = a.status;
+        });
+        setTeacherRecords(tExisting);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -239,6 +252,21 @@ export default function AuxiliarAsistencia() {
           ...prev,
           [key]: { ...(prev[key] || {}), [studentId]: current },
         }));
+      });
+  };
+
+  // Rota el estado de asistencia de un docente/personal al tocarlo manualmente.
+  // Misma lógica de ciclo que toggleStatus pero persiste en /teacher-attendance.
+  const toggleTeacherStatus = (teacherId) => {
+    const statuses = activeTipo === 'entrada' ? ['temprano', 'tarde', 'falta'] : ['salida', 'falta'];
+    const key = recordKey;
+    const current = (teacherRecords[key] || {})[teacherId] ?? 'falta';
+    const next = statuses[(statuses.indexOf(current) + 1) % statuses.length];
+    setTeacherRecords(prev => ({ ...prev, [key]: { ...(prev[key] || {}), [teacherId]: next } }));
+    api.post('/teacher-attendance', { teacher_id: teacherId, date: activeDate, turno: activeTurno, tipo: activeTipo, status: next })
+      .catch(err => {
+        console.error(err);
+        setTeacherRecords(prev => ({ ...prev, [key]: { ...(prev[key] || {}), [teacherId]: current } }));
       });
   };
 
@@ -679,6 +707,60 @@ export default function AuxiliarAsistencia() {
             );
           })
         )}
+
+        {/* Secciones de personal: Docentes y Otros.
+            Solo aparecen cuando hay personas en cada categoría.
+            Usan el mismo recordKey que los alumnos (fecha + turno + tipo). */}
+        {(() => {
+          const docentes = teachers.filter(t => t.role === 'docente');
+          const otros    = teachers.filter(t => t.role !== 'docente');
+          const dayTR    = teacherRecords[recordKey] || {};
+          const STAFF_SECTIONS = [
+            { skey: 'docentes', label: 'Docentes', list: docentes, color: '#1E40AF', bg: '#DBEAFE', border: '#93C5FD' },
+            { skey: 'otros',    label: 'Otros',    list: otros,    color: '#5B21B6', bg: '#EDE9FE', border: '#C4B5FD' },
+          ].filter(s => s.list.length > 0);
+
+          if (STAFF_SECTIONS.length === 0) return null;
+          return STAFF_SECTIONS.map(({ skey, label, list, color, bg, border }) => {
+            const lvKey = `staff_${skey}`;
+            const isOpen = !!openLevels[lvKey];
+            return (
+              <div key={skey} style={{ marginTop: 16 }}>
+                <button
+                  onClick={() => toggleLevel(lvKey)}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 8 : 0 }}
+                >
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color, background: bg, border: `1px solid ${border}`, padding: '2px 10px', borderRadius: 20 }}>
+                    {label.toUpperCase()} · {list.length}
+                  </span>
+                  <span style={{ fontSize: 11, color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
+                </button>
+                {isOpen && list.map(t => {
+                  const status = dayTR[t.id] ?? 'falta';
+                  const info = (activeTipo === 'salida' && status === 'falta')
+                    ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                    : statusInfo[status];
+                  return (
+                    <div key={t.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Icon name="user" color="var(--text-muted)" size={18} />
+                        </div>
+                        <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleTeacherStatus(t.id)}
+                        style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        {info.label}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          });
+        })()}
       </div>
 
       {/* Modal del escáner QR: ocupa toda la pantalla con fondo oscuro.

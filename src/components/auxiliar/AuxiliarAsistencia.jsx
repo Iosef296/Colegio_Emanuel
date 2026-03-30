@@ -603,6 +603,43 @@ export default function AuxiliarAsistencia() {
           const docenteColor = { color: '#0F766E', bg: '#CCFBF1', border: '#5EEAD4' };
           return (
             <div style={{ marginBottom: 12 }}>
+              {/* Sección DOCENTES — aparece primero */}
+              {teachers.length > 0 && (() => {
+                const lc = docenteColor;
+                const isOpen = !!openLevels['docentes'];
+                const dayTR = teacherRecords[recordKey] || {};
+                return (
+                  <div style={{ marginBottom: 6 }}>
+                    <button
+                      onClick={() => toggleLevel('docentes')}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 8 : 0 }}
+                    >
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20 }}>
+                        DOCENTES
+                      </span>
+                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
+                    </button>
+                    {isOpen && teachers.map(t => {
+                      const status = dayTR[t.id] ?? 'falta';
+                      const info = (activeTipo === 'salida' && status === 'falta')
+                        ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                        : statusInfo[status];
+                      return (
+                        <div key={t.id} className="card" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
+                          <button
+                            onClick={() => toggleTeacherStatus(t.id)}
+                            style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                          >
+                            {info.label}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {grouped.map(({ lvl, list }) => {
                 const lc = LEVEL_COLOR[lvl];
                 const isOpen = !!openLevels[lvl];
@@ -641,42 +678,6 @@ export default function AuxiliarAsistencia() {
                 );
               })}
 
-              {/* Sección DOCENTES — solo aparece cuando hay personal cargado */}
-              {teachers.length > 0 && (() => {
-                const lc = docenteColor;
-                const isOpen = !!openLevels['docentes'];
-                const dayTR = teacherRecords[recordKey] || {};
-                return (
-                  <div style={{ marginBottom: 6 }}>
-                    <button
-                      onClick={() => toggleLevel('docentes')}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 8 : 0 }}
-                    >
-                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20 }}>
-                        DOCENTES
-                      </span>
-                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
-                    </button>
-                    {isOpen && teachers.map(t => {
-                      const status = dayTR[t.id] ?? 'falta';
-                      const info = (activeTipo === 'salida' && status === 'falta')
-                        ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
-                        : statusInfo[status];
-                      return (
-                        <div key={t.id} className="card" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
-                          <button
-                            onClick={() => toggleTeacherStatus(t.id)}
-                            style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                          >
-                            {info.label}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
             </div>
           );
         })()}

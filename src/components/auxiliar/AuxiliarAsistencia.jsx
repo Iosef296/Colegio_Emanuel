@@ -558,19 +558,7 @@ export default function AuxiliarAsistencia() {
                 <button onClick={addDate} className="btn btn-primary" style={{ padding: '5px 12px', fontSize: 12 }}>OK</button>
                 <button onClick={() => setShowAddDate(false)} className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }}>×</button>
               </div>
-            ) : (
-              <button
-                onClick={() => setShowAddDate(true)}
-                style={{
-                  flexShrink: 0, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
-                  fontSize: 11, fontWeight: 700, border: '1.5px dashed var(--border)',
-                  background: 'white', color: 'var(--text-muted)',
-                  display: 'flex', alignItems: 'center', gap: 4,
-                }}
-              >
-                + fecha
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -589,9 +577,9 @@ export default function AuxiliarAsistencia() {
               style={{
                 flex: 1, padding: '9px 8px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
-                background: activeTipo === val ? 'white' : 'transparent',
-                color: activeTipo === val ? activeColor : 'var(--text-muted)',
-                boxShadow: activeTipo === val ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                background: activeTipo === val ? activeColor : 'transparent',
+                color: activeTipo === val ? 'white' : 'var(--text-muted)',
+                boxShadow: activeTipo === val ? `0 2px 6px ${activeColor}55` : 'none',
               }}
             >
               {label}
@@ -643,7 +631,7 @@ export default function AuxiliarAsistencia() {
                     >
                       <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, color: lc.color, flex: 1 }}>DOCENTES</span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: lc.accent, background: lc.bg, padding: '2px 8px', borderRadius: 20, border: `1px solid ${lc.border}` }}>
-                        {presentCount}/{teachers.length}
+                        {levelSettings.docentes.temprano} · {presentCount}/{teachers.length}
                       </span>
                       <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </button>
@@ -735,7 +723,7 @@ export default function AuxiliarAsistencia() {
                         )}
                       </span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: lc.accent, background: lc.bg, padding: '2px 8px', borderRadius: 20, border: `1px solid ${lc.border}` }}>
-                        {presentCount}/{levelStudentIds.length}
+                        {(levelSettings[lvl.toLowerCase()] || levelSettings.primaria).temprano} · {presentCount}/{levelStudentIds.length}
                       </span>
                       <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </button>

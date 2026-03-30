@@ -525,42 +525,42 @@ export default function AuxiliarAsistencia() {
 
       <div className="content-area">
 
-        {/* Date tabs */}
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, alignItems: 'center' }}>
-            {dates.map(d => (
-              <div key={d} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <button
-                  onClick={() => setActiveDate(d)}
-                  style={{
-                    padding: '7px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
-                    background: activeDate === d ? 'var(--primary)' : 'white',
-                    color: activeDate === d ? 'white' : 'var(--text-secondary)',
-                    boxShadow: activeDate === d ? '0 2px 8px rgba(30,58,95,0.3)' : '0 1px 3px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  {d === today ? 'Hoy' : formatDateLabel(d)}
-                </button>
-                {dates.length > 1 && (
+        {/* Date tabs — solo visibles cuando hay más de una fecha */}
+        {dates.length > 1 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, alignItems: 'center' }}>
+              {dates.map(d => (
+                <div key={d} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button
+                    onClick={() => setActiveDate(d)}
+                    style={{
+                      padding: '7px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                      fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                      background: activeDate === d ? 'var(--primary)' : 'white',
+                      color: activeDate === d ? 'white' : 'var(--text-secondary)',
+                      boxShadow: activeDate === d ? '0 2px 8px rgba(30,58,95,0.3)' : '0 1px 3px rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    {d === today ? 'Hoy' : formatDateLabel(d)}
+                  </button>
                   <button
                     onClick={() => removeDate(d)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
                   >
                     ×
                   </button>
-                )}
-              </div>
-            ))}
-            {showAddDate ? (
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
-                <input type="date" value={newDateInput} onChange={e => setNewDateInput(e.target.value)} className="form-input" style={{ padding: '5px 8px', fontSize: 12, width: 140 }} />
-                <button onClick={addDate} className="btn btn-primary" style={{ padding: '5px 12px', fontSize: 12 }}>OK</button>
-                <button onClick={() => setShowAddDate(false)} className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }}>×</button>
-              </div>
-            ) : null}
+                </div>
+              ))}
+              {showAddDate ? (
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+                  <input type="date" value={newDateInput} onChange={e => setNewDateInput(e.target.value)} className="form-input" style={{ padding: '5px 8px', fontSize: 12, width: 140 }} />
+                  <button onClick={addDate} className="btn btn-primary" style={{ padding: '5px 12px', fontSize: 12 }}>OK</button>
+                  <button onClick={() => setShowAddDate(false)} className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }}>×</button>
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Entrada / Salida segmented control */}
         <div style={{
@@ -631,7 +631,7 @@ export default function AuxiliarAsistencia() {
                     >
                       <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, color: lc.color, flex: 1 }}>DOCENTES</span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: lc.accent, background: lc.bg, padding: '2px 8px', borderRadius: 20, border: `1px solid ${lc.border}` }}>
-                        {levelSettings.docentes.temprano} · {presentCount}/{teachers.length}
+                        {levelSettings.docentes.temprano}
                       </span>
                       <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </button>
@@ -723,13 +723,14 @@ export default function AuxiliarAsistencia() {
                         )}
                       </span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: lc.accent, background: lc.bg, padding: '2px 8px', borderRadius: 20, border: `1px solid ${lc.border}` }}>
-                        {(levelSettings[lvl.toLowerCase()] || levelSettings.primaria).temprano} · {presentCount}/{levelStudentIds.length}
+                        {(levelSettings[lvl.toLowerCase()] || levelSettings.primaria).temprano}
                       </span>
                       <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </button>
                     {isOpen && (
                       <div style={{ padding: '10px 14px', borderTop: `1px solid ${lc.border}` }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {/* Grade pills */}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: hasSelected ? 14 : 0 }}>
                           {list.map(g => (
                             <button
                               key={g.id}
@@ -747,6 +748,65 @@ export default function AuxiliarAsistencia() {
                             </button>
                           ))}
                         </div>
+                        {/* Student section — inside the accordion of the selected grade's level */}
+                        {hasSelected && selectedGrade !== null && (() => {
+                          const level = getLevel(grades.find(g => g.id === selectedGrade)?.name || '');
+                          const ls = levelSettings[level] || levelSettings.primaria;
+                          return (<>
+                            <div style={{ background: lc.bg, borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 10, marginBottom: 12, border: `1px solid ${lc.border}` }}>
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>Temprano — {lvl}</label>
+                                <input type="time" className="form-input" value={ls.temprano} onChange={e => updateLevelSetting(level, 'temprano', e.target.value)} style={{ fontSize: 12, padding: '5px 8px' }} />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>Tarde hasta</label>
+                                <input type="time" className="form-input" value={ls.tarde} onChange={e => updateLevelSetting(level, 'tarde', e.target.value)} style={{ fontSize: 12, padding: '5px 8px' }} />
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                              {(activeTipo === 'entrada' ? [
+                                { val: gradeStudents.filter(s => dayRecords[s.id] === 'temprano').length, label: 'Temprano', color: '#059669', bg: '#D1FAE5' },
+                                { val: gradeStudents.filter(s => dayRecords[s.id] === 'tarde').length, label: 'Tardanzas', color: '#D97706', bg: '#FEF3C7' },
+                                { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Faltas', color: '#DC2626', bg: '#FEE2E2' },
+                                { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+                              ] : [
+                                { val: gradeStudents.filter(s => dayRecords[s.id] === 'salida').length, label: 'Salieron', color: '#2563EB', bg: '#DBEAFE' },
+                                { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
+                                { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+                              ]).map((item, i) => (
+                                <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 10, padding: '10px 6px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                                  <p style={{ fontSize: 22, fontWeight: 800, color: item.color, lineHeight: 1 }}>{item.val}</p>
+                                  <p style={{ fontSize: 10, color: item.color, fontWeight: 600, marginTop: 2 }}>{item.label}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>Toca el estado para cambiar manualmente</p>
+                            {gradeStudents.length === 0 ? (
+                              <div className="empty-state"><p>No hay alumnos en este grado</p></div>
+                            ) : gradeStudents.map(s => {
+                              const status = dayRecords[s.id] ?? 'falta';
+                              const info = (activeTipo === 'salida' && status === 'falta')
+                                ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                                : statusInfo[status];
+                              const initials = `${(s.first_name || '')[0] || ''}${(s.last_name || '')[0] || ''}`.toUpperCase();
+                              const avatarBg    = status === 'temprano' ? '#D1FAE5' : status === 'tarde' ? '#FEF3C7' : status === 'salida' ? '#DBEAFE' : '#F3F4F6';
+                              const avatarColor = status === 'temprano' ? '#059669' : status === 'tarde' ? '#D97706' : status === 'salida' ? '#2563EB' : '#9CA3AF';
+                              return (
+                                <div key={s.id} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'white', borderRadius: 12, padding: '10px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid var(--border)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: avatarColor, transition: 'all 0.2s' }}>
+                                      {initials}
+                                    </div>
+                                    <p style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.first_name} {s.last_name}</p>
+                                  </div>
+                                  <button onClick={() => toggleStatus(s.id)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                                    {info.label}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </>);
+                        })()}
                       </div>
                     )}
                   </div>
@@ -756,90 +816,6 @@ export default function AuxiliarAsistencia() {
             </div>
           );
         })()}
-
-        {/* Student section: only shown when a grade is selected */}
-        {selectedGrade !== null && <>
-
-          {/* Per-level time settings */}
-          {(() => {
-            const selectedGradeObj = grades.find(g => g.id === selectedGrade);
-            const level = getLevel(selectedGradeObj?.name || '');
-            const ls = levelSettings[level] || levelSettings.primaria;
-            const LC = {
-              inicial:    { color: '#92400E', bg: '#FFFBEB', border: '#FCD34D' },
-              primaria:   { color: '#1E40AF', bg: '#EFF6FF', border: '#93C5FD' },
-              secundaria: { color: '#065F46', bg: '#F0FDF4', border: '#6EE7B7' },
-              otros:      { color: '#5B21B6', bg: '#F5F3FF', border: '#C4B5FD' },
-            };
-            const lc = LC[level] || LC.primaria;
-            return (
-              <div style={{ background: lc.bg, borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 10, marginBottom: 12, border: `1px solid ${lc.border}` }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>
-                    Temprano — {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </label>
-                  <input type="time" className="form-input" value={ls.temprano} onChange={e => updateLevelSetting(level, 'temprano', e.target.value)} style={{ fontSize: 12, padding: '5px 8px' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: lc.color, display: 'block', marginBottom: 4 }}>
-                    Tarde hasta
-                  </label>
-                  <input type="time" className="form-input" value={ls.tarde} onChange={e => updateLevelSetting(level, 'tarde', e.target.value)} style={{ fontSize: 12, padding: '5px 8px' }} />
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Counters */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-            {(activeTipo === 'entrada' ? [
-              { val: gradeStudents.filter(s => dayRecords[s.id] === 'temprano').length, label: 'Temprano', color: '#059669', bg: '#D1FAE5' },
-              { val: gradeStudents.filter(s => dayRecords[s.id] === 'tarde').length, label: 'Tardanzas', color: '#D97706', bg: '#FEF3C7' },
-              { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Faltas', color: '#DC2626', bg: '#FEE2E2' },
-              { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
-            ] : [
-              { val: gradeStudents.filter(s => dayRecords[s.id] === 'salida').length, label: 'Salieron', color: '#2563EB', bg: '#DBEAFE' },
-              { val: gradeStudents.filter(s => !dayRecords[s.id] || dayRecords[s.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
-              { val: gradeStudents.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
-            ]).map((item, i) => (
-              <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 10, padding: '10px 6px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <p style={{ fontSize: 22, fontWeight: 800, color: item.color, lineHeight: 1 }}>{item.val}</p>
-                <p style={{ fontSize: 10, color: item.color, fontWeight: 600, marginTop: 2 }}>{item.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-            Toca el estado para cambiar manualmente
-          </p>
-
-          {gradeStudents.length === 0 ? (
-            <div className="empty-state"><p>No hay alumnos en este grado</p></div>
-          ) : (
-            gradeStudents.map(s => {
-              const status = dayRecords[s.id] ?? 'falta';
-              const info = (activeTipo === 'salida' && status === 'falta')
-                ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
-                : statusInfo[status];
-              const initials = `${(s.first_name || '')[0] || ''}${(s.last_name || '')[0] || ''}`.toUpperCase();
-              const avatarBg    = status === 'temprano' ? '#D1FAE5' : status === 'tarde' ? '#FEF3C7' : status === 'salida' ? '#DBEAFE' : '#F3F4F6';
-              const avatarColor = status === 'temprano' ? '#059669' : status === 'tarde' ? '#D97706' : status === 'salida' ? '#2563EB' : '#9CA3AF';
-              return (
-                <div key={s.id} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'white', borderRadius: 12, padding: '10px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: avatarColor, transition: 'all 0.2s' }}>
-                      {initials}
-                    </div>
-                    <p style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.first_name} {s.last_name}</p>
-                  </div>
-                  <button onClick={() => toggleStatus(s.id)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                    {info.label}
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </>}
 
       </div>
 

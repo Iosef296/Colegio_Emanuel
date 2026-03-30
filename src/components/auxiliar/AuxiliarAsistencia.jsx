@@ -661,7 +661,7 @@ export default function AuxiliarAsistencia() {
                         {list.map(g => (
                           <button
                             key={g.id}
-                            onClick={() => setSelectedGrade(g.id)}
+                            onClick={() => setSelectedGrade(selectedGrade === g.id ? null : g.id)}
                             style={{
                               padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${selectedGrade === g.id ? 'transparent' : lc.border}`,
                               cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',

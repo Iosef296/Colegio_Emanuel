@@ -40,6 +40,7 @@ const NAV_ITEMS = {
     { to: '/admin/pagos', icon: 'dollar', label: 'Pagos' },
     { to: '/admin/comunicados', icon: 'bell', label: 'Comunicados' },
     { to: '/admin/informes', icon: 'eye', label: 'Informes' },
+    { to: '/admin/horarios', icon: 'clock', label: 'Horarios' },
     { to: '/admin/whatsapp', icon: 'whatsapp', label: 'WhatsApp' },
   ],
 };

@@ -58,6 +58,7 @@ import AdminPagos from './components/admin/AdminPagos';
 import AdminComunicados from './components/admin/AdminComunicados';
 import Informes from './components/admin/Informes';
 import AdminWhatsapp from './components/admin/AdminWhatsapp';
+import AdminHorarios from './components/admin/AdminHorarios';
 
 /**
  * RoleRedirect — componente de redirección inteligente según el rol del usuario.
@@ -213,6 +214,7 @@ export default function App() {
       <Route path="/admin/asistencia" element={<ProtectedRoute roles={['admin', 'director', 'secretaria']}><Layout><AuxiliarAsistencia /></Layout></ProtectedRoute>} />
       {/* Panel de estado y configuración de la integración con WhatsApp */}
       <Route path="/admin/whatsapp" element={<ProtectedRoute roles={['admin', 'director', 'secretaria']}><Layout><AdminWhatsapp /></Layout></ProtectedRoute>} />
+      <Route path="/admin/horarios" element={<ProtectedRoute roles={['admin', 'director', 'secretaria']}><Layout><AdminHorarios /></Layout></ProtectedRoute>} />
 
       {/* ------------------------------------------------------------------ */}
       {/* FALLBACK — cualquier ruta no definida redirige según el rol         */}

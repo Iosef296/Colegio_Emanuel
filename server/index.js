@@ -35,6 +35,7 @@ import pushTokenRoutes from './routes/push-tokens.js';
 import settingsRoutes from './routes/settings.js';
 import whatsappRoutes from './routes/whatsapp.js';
 import teacherAttendanceRoutes from './routes/teacher-attendance.js';
+import schedulesRoutes from './routes/schedules.js';
 
 // Servicios adicionales que corren en paralelo al servidor HTTP
 import { connectWhatsApp } from './utils/whatsapp.js';
@@ -114,6 +115,7 @@ app.use('/api/push-tokens', pushTokenRoutes);             // Tokens para notific
 app.use('/api/settings', settingsRoutes);                 // Configuración global de la aplicación
 app.use('/api/whatsapp', whatsappRoutes);                 // Integración con WhatsApp (Baileys)
 app.use('/api/teacher-attendance', teacherAttendanceRoutes); // Asistencia del personal docente
+app.use('/api/schedules', schedulesRoutes);                  // Horarios semanales por grado
 
 // ---------------------------------------------------------------------------
 // Endpoint de salud — usado por Fly.io para confirmar que el proceso está vivo
@@ -343,6 +345,23 @@ pool._pool.query(`
   CREATE INDEX IF NOT EXISTS idx_attendance_date_student ON attendance(date, student_id);
 `).then(() => console.log('DB: indexes OK'))
   .catch(err => console.error('DB index error:', err.message));
+
+// Tabla de horarios semanales
+pool.query(`
+  CREATE TABLE IF NOT EXISTS schedules (
+    id SERIAL PRIMARY KEY,
+    grade_level_id INT NOT NULL REFERENCES grade_levels(id) ON DELETE CASCADE,
+    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 5),
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    subject VARCHAR(100) NOT NULL DEFAULT '',
+    teacher_id INT REFERENCES users(id) ON DELETE SET NULL,
+    color VARCHAR(10),
+    UNIQUE(grade_level_id, day_of_week, start_time)
+  );
+  CREATE INDEX IF NOT EXISTS idx_schedules_grade ON schedules(grade_level_id);
+`).then(() => console.log('DB: schedules OK'))
+  .catch(err => console.error('DB schedules error:', err.message));
 
 // ---------------------------------------------------------------------------
 // Migración atómica con bloque PL/pgSQL:

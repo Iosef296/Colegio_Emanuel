@@ -310,7 +310,7 @@ export default function AuxiliarAsistencia() {
       const now = new Date();
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const threshold = levelSettingsRef.current.docentes.temprano;
-      const status = currentTime <= threshold ? 'temprano' : 'tarde';
+      const status = activeTipoRef.current === 'salida' ? 'salida' : (currentTime <= threshold ? 'temprano' : 'tarde');
       // Registra la asistencia del docente en el endpoint específico.
       api.post('/teacher-attendance', {
         teacher_id: teacher.id,

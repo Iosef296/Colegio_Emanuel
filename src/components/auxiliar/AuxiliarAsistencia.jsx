@@ -193,7 +193,7 @@ export default function AuxiliarAsistencia() {
         setGrades(gls);
         setStudents(studs);
         setTeachers(usrs);
-        if (gls.length) setSelectedGrade(gls[0].id);
+        // No auto-seleccionar: el usuario elige el grado o docentes manualmente.
         const existing = {};
         att.forEach(a => {
           const turno = a.turno || 'mañana';
@@ -682,6 +682,9 @@ export default function AuxiliarAsistencia() {
           );
         })()}
 
+        {/* Contadores y lista solo aparecen cuando hay un grado seleccionado */}
+        {selectedGrade !== null && <>
+
         {/* Contadores de resumen del grado seleccionado para el contexto actual.
             En modo "entrada" muestra: Temprano / Tardanzas / Faltas / Total.
             En modo "salida" muestra: Salieron / Pendientes / Total. */}
@@ -742,6 +745,7 @@ export default function AuxiliarAsistencia() {
             );
           })
         )}
+        </>}
 
       </div>
 

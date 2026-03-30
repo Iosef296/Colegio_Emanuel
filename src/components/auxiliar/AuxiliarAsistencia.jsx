@@ -600,6 +600,7 @@ export default function AuxiliarAsistencia() {
             .map(lvl => ({ lvl, list: grades.filter(g => getLevel(g.name) === lvl) }))
             .filter(({ list }) => list.length > 0);
 
+          const docenteColor = { color: '#0F766E', bg: '#CCFBF1', border: '#5EEAD4' };
           return (
             <div style={{ marginBottom: 12 }}>
               {grouped.map(({ lvl, list }) => {
@@ -608,7 +609,6 @@ export default function AuxiliarAsistencia() {
                 const hasSelected = list.some(g => g.id === selectedGrade);
                 return (
                   <div key={lvl} style={{ marginBottom: 6 }}>
-                    {/* Header clickeable del nivel */}
                     <button
                       onClick={() => toggleLevel(lvl)}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 6 : 0 }}
@@ -617,11 +617,8 @@ export default function AuxiliarAsistencia() {
                         {lvl.toUpperCase()}
                         {hasSelected && !isOpen && <span style={{ marginLeft: 5 }}>·</span>}
                       </span>
-                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>
-                        {isOpen ? '▲' : '▼'}
-                      </span>
+                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
                     </button>
-                    {/* Pestañas de grados — solo visibles si está abierto */}
                     {isOpen && (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {list.map(g => (
@@ -643,6 +640,43 @@ export default function AuxiliarAsistencia() {
                   </div>
                 );
               })}
+
+              {/* Sección DOCENTES — solo aparece cuando hay personal cargado */}
+              {teachers.length > 0 && (() => {
+                const lc = docenteColor;
+                const isOpen = !!openLevels['docentes'];
+                const dayTR = teacherRecords[recordKey] || {};
+                return (
+                  <div style={{ marginBottom: 6 }}>
+                    <button
+                      onClick={() => toggleLevel('docentes')}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 8 : 0 }}
+                    >
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: lc.color, background: lc.bg, border: `1px solid ${lc.border}`, padding: '2px 10px', borderRadius: 20 }}>
+                        DOCENTES
+                      </span>
+                      <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
+                    </button>
+                    {isOpen && teachers.map(t => {
+                      const status = dayTR[t.id] ?? 'falta';
+                      const info = (activeTipo === 'salida' && status === 'falta')
+                        ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                        : statusInfo[status];
+                      return (
+                        <div key={t.id} className="card" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
+                          <button
+                            onClick={() => toggleTeacherStatus(t.id)}
+                            style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                          >
+                            {info.label}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
@@ -708,59 +742,6 @@ export default function AuxiliarAsistencia() {
           })
         )}
 
-        {/* Secciones de personal: Docentes y Otros.
-            Solo aparecen cuando hay personas en cada categoría.
-            Usan el mismo recordKey que los alumnos (fecha + turno + tipo). */}
-        {(() => {
-          const docentes = teachers.filter(t => t.role === 'docente');
-          const otros    = teachers.filter(t => t.role !== 'docente');
-          const dayTR    = teacherRecords[recordKey] || {};
-          const STAFF_SECTIONS = [
-            { skey: 'docentes', label: 'Docentes', list: docentes, color: '#1E40AF', bg: '#DBEAFE', border: '#93C5FD' },
-            { skey: 'otros',    label: 'Otros',    list: otros,    color: '#5B21B6', bg: '#EDE9FE', border: '#C4B5FD' },
-          ].filter(s => s.list.length > 0);
-
-          if (STAFF_SECTIONS.length === 0) return null;
-          return STAFF_SECTIONS.map(({ skey, label, list, color, bg, border }) => {
-            const lvKey = `staff_${skey}`;
-            const isOpen = !!openLevels[lvKey];
-            return (
-              <div key={skey} style={{ marginTop: 16 }}>
-                <button
-                  onClick={() => toggleLevel(lvKey)}
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginBottom: isOpen ? 8 : 0 }}
-                >
-                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color, background: bg, border: `1px solid ${border}`, padding: '2px 10px', borderRadius: 20 }}>
-                    {label.toUpperCase()} · {list.length}
-                  </span>
-                  <span style={{ fontSize: 11, color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
-                </button>
-                {isOpen && list.map(t => {
-                  const status = dayTR[t.id] ?? 'falta';
-                  const info = (activeTipo === 'salida' && status === 'falta')
-                    ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
-                    : statusInfo[status];
-                  return (
-                    <div key={t.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Icon name="user" color="var(--text-muted)" size={18} />
-                        </div>
-                        <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
-                      </div>
-                      <button
-                        onClick={() => toggleTeacherStatus(t.id)}
-                        style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                      >
-                        {info.label}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          });
-        })()}
       </div>
 
       {/* Modal del escáner QR: ocupa toda la pantalla con fondo oscuro.

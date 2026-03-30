@@ -619,23 +619,45 @@ export default function AuxiliarAsistencia() {
                       </span>
                       <span style={{ fontSize: 11, color: lc.color, fontWeight: 700, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
                     </button>
-                    {isOpen && teachers.map(t => {
-                      const status = dayTR[t.id] ?? 'falta';
-                      const info = (activeTipo === 'salida' && status === 'falta')
-                        ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
-                        : statusInfo[status];
-                      return (
-                        <div key={t.id} className="card" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
-                          <button
-                            onClick={() => toggleTeacherStatus(t.id)}
-                            style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                          >
-                            {info.label}
-                          </button>
+                    {isOpen && (() => {
+                      const counts = activeTipo === 'entrada' ? [
+                        { val: teachers.filter(t => dayTR[t.id] === 'temprano').length, label: 'Temprano',  color: 'var(--success)', bg: '#D1FAE5' },
+                        { val: teachers.filter(t => dayTR[t.id] === 'tarde').length,    label: 'Tardanzas', color: 'var(--warning)', bg: '#FEF3C7' },
+                        { val: teachers.filter(t => !dayTR[t.id] || dayTR[t.id] === 'falta').length, label: 'Faltas', color: 'var(--danger)', bg: '#FEE2E2' },
+                        { val: teachers.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+                      ] : [
+                        { val: teachers.filter(t => dayTR[t.id] === 'salida').length, label: 'Salieron',   color: 'var(--primary)', bg: '#DBEAFE' },
+                        { val: teachers.filter(t => !dayTR[t.id] || dayTR[t.id] === 'falta').length, label: 'Pendientes', color: 'var(--text-muted)', bg: 'var(--bg)' },
+                        { val: teachers.length, label: 'Total', color: 'var(--text)', bg: 'var(--bg)' },
+                      ];
+                      return (<>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                          {counts.map((item, i) => (
+                            <div key={i} style={{ flex: 1, background: item.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+                              <p style={{ fontSize: 22, fontWeight: 800, color: item.color }}>{item.val}</p>
+                              <p style={{ fontSize: 10, color: item.color, fontWeight: 600 }}>{item.label}</p>
+                            </div>
+                          ))}
                         </div>
-                      );
-                    })}
+                        {teachers.map(t => {
+                          const status = dayTR[t.id] ?? 'falta';
+                          const info = (activeTipo === 'salida' && status === 'falta')
+                            ? { label: 'Pendiente', color: 'var(--text-muted)', bg: 'var(--bg)' }
+                            : statusInfo[status];
+                          return (
+                            <div key={t.id} className="card" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <p style={{ fontSize: 13, fontWeight: 600 }}>{t.full_name}</p>
+                              <button
+                                onClick={() => toggleTeacherStatus(t.id)}
+                                style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: info.bg, color: info.color, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                              >
+                                {info.label}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>);
+                    })()}
                   </div>
                 );
               })()}

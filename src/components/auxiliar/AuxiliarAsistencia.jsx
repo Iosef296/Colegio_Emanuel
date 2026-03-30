@@ -184,8 +184,9 @@ export default function AuxiliarAsistencia() {
       setLevelSettings(prev => {
         const updated = { ...prev };
         Object.keys(updated).forEach(lvl => {
-          const t = s[`att_temprano_${activeTurno}_${lvl}`] || s[`att_temprano_${activeTurno}`];
-          const d = s[`att_tarde_${activeTurno}_${lvl}`]    || s[`att_tarde_${activeTurno}`];
+          // Solo carga el valor propio del nivel, sin fallback global
+          const t = s[`att_temprano_${activeTurno}_${lvl}`];
+          const d = s[`att_tarde_${activeTurno}_${lvl}`];
           if (t) updated[lvl] = { ...updated[lvl], temprano: t };
           if (d) updated[lvl] = { ...updated[lvl], tarde: d };
         });

@@ -288,7 +288,7 @@ export async function connectWhatsApp() {
     auth: state,
     logger,
     printQRInTerminal: false,         // No imprimir QR en consola; lo mostramos en el panel web.
-    browser: ['Colegio Emanuel', 'Chrome', '120.0'], // Identificación del cliente ante WA.
+    browser: ['Chrome', 'Chrome', '120.0'],
     getMessage: async () => ({ conversation: '' }), // Requerido por Baileys; devuelve mensaje vacío.
   });
 

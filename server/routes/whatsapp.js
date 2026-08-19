@@ -139,12 +139,45 @@ const DISCONNECT_MEANING = {
   515: 'restartRequired — reinicio requerido tras vincular (normal, no es error)',
 };
 
+const fmtDate = (ts) => ts ? new Date(ts).toLocaleString('es-PE', { timeZone: 'America/Lima', dateStyle: 'medium', timeStyle: 'short' }) : '—';
+const fmtSec = (ms) => ms == null ? '—' : (ms / 1000).toFixed(1) + 's';
+const fmtDur = (min) => {
+  if (min == null) return '—';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+};
+
+/**
+ * veredicto(session) — heurística simple en texto plano para que alguien sin
+ * conocimiento de la API de WhatsApp entienda qué probablemente pasó en esa sesión.
+ * No es 100% certero (WhatsApp no explica sus baneos) pero da una pista accionable.
+ */
+function veredicto(s) {
+  if (s.disconnect_code == null) return 'Sesión sigue activa (o el servidor se reinició sin registrar el cierre).';
+  const risky = s.avg_delay_ms != null && s.avg_delay_ms < 4000;
+  const highVolume = s.messages_sent > 150;
+  if (s.disconnect_code === 403) {
+    return `ALERTA: WhatsApp rechazó la conexión (403). Señal fuerte de restricción/baneo.${risky ? ' El intervalo promedio (' + fmtSec(s.avg_delay_ms) + ') estuvo por debajo de lo recomendado (5-10s) — probable causa.' : ''}${highVolume ? ' Además se enviaron ' + s.messages_sent + ' mensajes en esta sesión, volumen alto.' : ''}`;
+  }
+  if (s.disconnect_code === 401) {
+    if (risky || highVolume) {
+      return `SOSPECHOSO: sesión cerrada (401 loggedOut). Puede ser baneo o cierre manual desde el teléfono — no se puede distinguir con certeza.${risky ? ' Intervalo promedio de ' + fmtSec(s.avg_delay_ms) + ' es más rápido de lo recomendado.' : ''}${highVolume ? ' Volumen alto: ' + s.messages_sent + ' mensajes en la sesión.' : ''}`;
+    }
+    return 'Probable cierre manual (401 loggedOut) con volumen e intervalo normales — no parece baneo por spam.';
+  }
+  if (s.disconnect_code === 515) return 'Normal: reinicio requerido tras vincular el QR, no es un baneo.';
+  if (s.disconnect_code === 440) return 'Normal: se vinculó el mismo número en otro dispositivo (no es baneo).';
+  return `Corte de conexión con código ${s.disconnect_code} (${DISCONNECT_MEANING[s.disconnect_code] || 'código desconocido'}). No parece indicar baneo por sí solo.`;
+}
+
 /**
  * GET /whatsapp/report
- * Genera un reporte de diagnóstico a partir de whatsapp_events: cuántos mensajes
- * se enviaron, con qué intervalo real entre ellos, y en qué momento/código se
- * cerró cada sesión — para poder correlacionar volumen/velocidad de envío con
- * los baneos/desconexiones y ajustar la estrategia de envío.
+ * Genera un reporte de diagnóstico en texto plano (no JSON crudo) a partir de
+ * whatsapp_events: cuántos mensajes se enviaron, con qué intervalo real entre
+ * ellos, y en qué momento/código se cerró cada sesión — con explicación en
+ * español simple de cada término, para poder leerlo sin conocer la API de
+ * WhatsApp ni el formato interno de los logs.
  */
 router.get('/report', async (req, res) => {
   try {
@@ -195,8 +228,6 @@ router.get('/report', async (req, res) => {
       closed_at: s.closed_at,
       duration_min: s.opened_at && s.closed_at ? Math.round((new Date(s.closed_at) - new Date(s.opened_at)) / 60000) : null,
       disconnect_code: s.disconnect_code,
-      disconnect_meaning: s.disconnect_code ? (DISCONNECT_MEANING[s.disconnect_code] || 'código desconocido') : null,
-      logged_out: s.logged_out,
       messages_sent: s.messages_sent,
       messages_failed: s.messages_failed,
       avg_delay_ms: avg(s.delays),
@@ -204,23 +235,65 @@ router.get('/report', async (req, res) => {
       max_delay_ms: s.delays.length ? Math.max(...s.delays) : null,
     }));
 
-    const report = {
-      generated_at: new Date().toISOString(),
-      note: 'Reporte de diagnostico de envios WhatsApp. "session" = periodo entre conectar y desconectar. Revisar messages_sent y avg_delay_ms de la sesion previa a cada disconnect_code para correlacionar con baneos.',
-      summary: {
-        total_events_logged: rows.length,
-        total_messages_sent: totalOk,
-        total_messages_failed: totalFail,
-        avg_delay_ms_overall: avg(allDelays),
-        min_delay_ms_overall: allDelays.length ? Math.min(...allDelays) : null,
-        max_delay_ms_overall: allDelays.length ? Math.max(...allDelays) : null,
-        total_sessions: sessions.length,
-      },
-      sessions: sessionsSummary,
-      raw_events: rows.map((r) => ({ ts: r.ts, event: r.event, detail: r.detail })),
-    };
+    // ── Construcción del texto legible ──────────────────────────────────────
+    const L = [];
+    L.push('REPORTE DE DIAGNOSTICO — WHATSAPP (Colegio Emanuel)');
+    L.push(`Generado: ${fmtDate(new Date())}`);
+    L.push('');
+    L.push('='.repeat(70));
+    L.push('GLOSARIO (para leer este reporte sin conocer la API de WhatsApp)');
+    L.push('='.repeat(70));
+    L.push('- "Sesion": periodo entre que el servidor se conecta a WhatsApp (se');
+    L.push('  escanea el QR) y el momento en que se desconecta. Cada corte abre');
+    L.push('  una sesion nueva al reconectar.');
+    L.push('- "Intervalo entre mensajes": tiempo real que paso entre el envio de');
+    L.push('  un mensaje y el anterior. El sistema intenta esperar 5-10 segundos');
+    L.push('  entre cada uno para simular un humano y no parecer spam.');
+    L.push('- "Codigo de desconexion": codigo que WhatsApp manda al cortar la');
+    L.push('  conexion. Los mas relevantes:');
+    L.push('    401 (loggedOut)  = sesion cerrada; puede ser manual o baneo.');
+    L.push('    403 (forbidden)  = WhatsApp rechazo la conexion; señal fuerte de baneo.');
+    L.push('    515 (restartRequired) = normal, ocurre justo despues de vincular el QR.');
+    L.push('    440 (connectionReplaced) = se vinculo el mismo numero en otro dispositivo.');
+    L.push('');
+    L.push('='.repeat(70));
+    L.push('RESUMEN GENERAL');
+    L.push('='.repeat(70));
+    L.push(`- Mensajes enviados con exito: ${totalOk}`);
+    L.push(`- Mensajes que fallaron al enviar: ${totalFail}`);
+    L.push(`- Intervalo promedio entre mensajes: ${fmtSec(avg(allDelays))} (recomendado: 5.0s-10.0s)`);
+    L.push(`- Intervalo minimo registrado: ${fmtSec(allDelays.length ? Math.min(...allDelays) : null)}`);
+    L.push(`- Sesiones de conexion registradas: ${sessions.length}`);
+    L.push('');
+    L.push('='.repeat(70));
+    L.push('DETALLE POR SESION (de la mas antigua a la mas reciente)');
+    L.push('='.repeat(70));
+    if (sessionsSummary.length === 0) {
+      L.push('(Todavia no hay datos suficientes. Este reporte se llena a medida que');
+      L.push(' el sistema envia mensajes y se conecta/desconecta de WhatsApp.)');
+    }
+    for (const s of sessionsSummary) {
+      L.push('');
+      L.push(`Sesion ${s.session}`);
+      L.push(`  Conectado:     ${fmtDate(s.opened_at)}`);
+      L.push(`  Desconectado:  ${fmtDate(s.closed_at)}  (duro ${fmtDur(s.duration_min)})`);
+      L.push(`  Mensajes enviados: ${s.messages_sent}  |  fallidos: ${s.messages_failed}`);
+      L.push(`  Intervalo promedio: ${fmtSec(s.avg_delay_ms)}  (min ${fmtSec(s.min_delay_ms)}, max ${fmtSec(s.max_delay_ms)})`);
+      L.push(`  Motivo de corte: ${s.disconnect_code == null ? 'sigue conectada' : `codigo ${s.disconnect_code} — ${DISCONNECT_MEANING[s.disconnect_code] || 'desconocido'}`}`);
+      L.push(`  Veredicto: ${veredicto(s)}`);
+    }
+    L.push('');
+    L.push('='.repeat(70));
+    L.push('COMO USAR ESTE REPORTE');
+    L.push('='.repeat(70));
+    L.push('Buscar sesiones marcadas "ALERTA" o "SOSPECHOSO": ahi es donde el');
+    L.push('intervalo entre mensajes fue muy rapido o el volumen fue muy alto justo');
+    L.push('antes del corte. Si varias sesiones seguidas terminan asi, conviene');
+    L.push('aumentar el intervalo entre mensajes o repartir los envios masivos en');
+    L.push('mas tiempo (por ejemplo, no mandar todos los recordatorios de pago el');
+    L.push('mismo minuto).');
 
-    res.json(report);
+    res.type('text/plain; charset=utf-8').send(L.join('\n'));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

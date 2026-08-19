@@ -99,18 +99,26 @@ export default function AdminWhatsapp() {
 
   /**
    * downloadReport — descarga el reporte de diagnóstico (envíos, intervalos
-   * reales entre mensajes, desconexiones con código) como archivo .json,
-   * para poder estudiar el patrón que llevó a un baneo/desconexión.
+   * reales entre mensajes, desconexiones con código, glosario y veredicto por
+   * sesión) como archivo .txt en español simple, para poder estudiar el
+   * patrón que llevó a un baneo/desconexión.
+   * No usa `api.get` porque el endpoint devuelve texto plano, no JSON.
    */
   const downloadReport = async () => {
     setReportLoading(true);
     try {
-      const data = await api.get('/whatsapp/report');
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const token = localStorage.getItem('token');
+      const base = import.meta.env.MODE === 'development' ? '/api' : 'https://colegio-emanuel-api.fly.dev/api';
+      const res = await fetch(`${base}/whatsapp/report`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Error del servidor');
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `whatsapp-reporte-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `whatsapp-reporte-${new Date().toISOString().slice(0, 10)}.txt`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {

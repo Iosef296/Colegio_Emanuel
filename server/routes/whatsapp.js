@@ -126,4 +126,104 @@ router.post('/send-reminder', async (req, res) => {
   }
 });
 
+// ── Códigos de desconexión de Baileys/WhatsApp ────────────────────────────────
+// Referencia para interpretar el campo disconnect_code del reporte.
+const DISCONNECT_MEANING = {
+  401: 'loggedOut — sesión cerrada desde el teléfono (o cuenta baneada/removida por WhatsApp)',
+  403: 'forbidden — WhatsApp rechazó la conexión (posible restricción/baneo)',
+  408: 'timedOut — se perdió la conexión por timeout',
+  411: 'multideviceMismatch — versión de protocolo desactualizada',
+  428: 'connectionClosed — conexión cerrada por el servidor',
+  440: 'connectionReplaced — se abrió otra sesión con el mismo dispositivo',
+  500: 'badSession — sesión corrupta',
+  515: 'restartRequired — reinicio requerido tras vincular (normal, no es error)',
+};
+
+/**
+ * GET /whatsapp/report
+ * Genera un reporte de diagnóstico a partir de whatsapp_events: cuántos mensajes
+ * se enviaron, con qué intervalo real entre ellos, y en qué momento/código se
+ * cerró cada sesión — para poder correlacionar volumen/velocidad de envío con
+ * los baneos/desconexiones y ajustar la estrategia de envío.
+ */
+router.get('/report', async (req, res) => {
+  try {
+    const { rows } = await pool._pool.query(
+      'SELECT id, ts, event, detail FROM whatsapp_events ORDER BY ts ASC'
+    );
+
+    const avg = (arr) => (arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null);
+
+    // Agrupa los eventos en "sesiones": desde que se conecta hasta que se desconecta,
+    // acumulando cuántos mensajes se enviaron/fallaron y con qué intervalos en esa sesión.
+    const sessions = [];
+    let current = null;
+    const allDelays = [];
+    let totalOk = 0;
+    let totalFail = 0;
+
+    for (const row of rows) {
+      const detail = row.detail || {};
+      if (row.event === 'connected') {
+        current = { opened_at: row.ts, closed_at: null, disconnect_code: null, logged_out: null, messages_sent: 0, messages_failed: 0, delays: [] };
+        sessions.push(current);
+      } else if (row.event === 'send_ok') {
+        totalOk++;
+        if (current) current.messages_sent++;
+        if (detail.delay_ms != null) {
+          allDelays.push(detail.delay_ms);
+          if (current) current.delays.push(detail.delay_ms);
+        }
+      } else if (row.event === 'send_fail') {
+        totalFail++;
+        if (current) current.messages_failed++;
+      } else if (row.event === 'disconnected') {
+        if (!current) {
+          current = { opened_at: null, closed_at: null, disconnect_code: null, logged_out: null, messages_sent: 0, messages_failed: 0, delays: [] };
+          sessions.push(current);
+        }
+        current.closed_at = row.ts;
+        current.disconnect_code = detail.code ?? null;
+        current.logged_out = detail.logged_out ?? null;
+        current = null; // cierra la sesión: los próximos send_ok/fail no cuentan hasta el siguiente 'connected'
+      }
+    }
+
+    const sessionsSummary = sessions.map((s, i) => ({
+      session: i + 1,
+      opened_at: s.opened_at,
+      closed_at: s.closed_at,
+      duration_min: s.opened_at && s.closed_at ? Math.round((new Date(s.closed_at) - new Date(s.opened_at)) / 60000) : null,
+      disconnect_code: s.disconnect_code,
+      disconnect_meaning: s.disconnect_code ? (DISCONNECT_MEANING[s.disconnect_code] || 'código desconocido') : null,
+      logged_out: s.logged_out,
+      messages_sent: s.messages_sent,
+      messages_failed: s.messages_failed,
+      avg_delay_ms: avg(s.delays),
+      min_delay_ms: s.delays.length ? Math.min(...s.delays) : null,
+      max_delay_ms: s.delays.length ? Math.max(...s.delays) : null,
+    }));
+
+    const report = {
+      generated_at: new Date().toISOString(),
+      note: 'Reporte de diagnostico de envios WhatsApp. "session" = periodo entre conectar y desconectar. Revisar messages_sent y avg_delay_ms de la sesion previa a cada disconnect_code para correlacionar con baneos.',
+      summary: {
+        total_events_logged: rows.length,
+        total_messages_sent: totalOk,
+        total_messages_failed: totalFail,
+        avg_delay_ms_overall: avg(allDelays),
+        min_delay_ms_overall: allDelays.length ? Math.min(...allDelays) : null,
+        max_delay_ms_overall: allDelays.length ? Math.max(...allDelays) : null,
+        total_sessions: sessions.length,
+      },
+      sessions: sessionsSummary,
+      raw_events: rows.map((r) => ({ ts: r.ts, event: r.event, detail: r.detail })),
+    };
+
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

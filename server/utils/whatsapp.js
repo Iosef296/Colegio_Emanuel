@@ -35,6 +35,36 @@ let qrBase64 = null;          // QR codificado en base64 para mostrar en el pane
 let waStatus = 'disconnected'; // Estado actual: 'disconnected' | 'connecting' | 'qr' | 'connected'
 let reconnectAttempts = 0;    // Contador de intentos de reconexión consecutivos.
 let reconnectTimer = null;    // Referencia al setTimeout de reconexión para poder cancelarlo.
+let lastSendTime = null;      // Timestamp del último intento de envío, para medir el intervalo real entre mensajes.
+
+// ── Registro de eventos (diagnóstico de baneos) ────────────────────────────────
+// Guarda cada envío (éxito/fallo, intervalo real) y cada evento de conexión
+// (QR, conectado, desconectado con código) en la DB para poder analizar después
+// cuántos mensajes se enviaron y con qué intervalo antes de un baneo/desconexión.
+
+/**
+ * maskJid(jid) — oculta la mayoría de dígitos del número en los logs,
+ * dejando solo prefijo y sufijo (no hace falta guardar el número completo
+ * para el análisis de patrones de envío).
+ */
+function maskJid(jid) {
+  const num = (jid || '').split('@')[0];
+  if (num.length <= 4) return '*'.repeat(num.length);
+  return num.slice(0, 2) + '*'.repeat(num.length - 4) + num.slice(-2);
+}
+
+/**
+ * logEvent(event, detail) — inserta un evento en whatsapp_events.
+ * Silencioso ante errores: el logging nunca debe interrumpir el flujo de WhatsApp.
+ */
+async function logEvent(event, detail = {}) {
+  try {
+    await pool._pool.query(
+      'INSERT INTO whatsapp_events (event, detail) VALUES ($1, $2)',
+      [event, JSON.stringify(detail)]
+    );
+  } catch { /* no-op: el reporte solo pierde ese evento puntual */ }
+}
 
 // ── Cola de mensajes salientes ────────────────────────────────────────────────
 // WhatsApp puede banear cuentas que envían mensajes en ráfaga sin pausa.
@@ -57,13 +87,19 @@ async function processQueue() {
   while (queue.length > 0) {
     // Extraer el siguiente mensaje de la cola (FIFO).
     const { jid, text, resolve, reject } = queue.shift();
+    // Intervalo real desde el intento anterior — clave para diagnosticar baneos.
+    const delayMs = lastSendTime ? Date.now() - lastSendTime : null;
     try {
       // Verificar que el socket esté activo antes de intentar enviar.
       if (!sock || waStatus !== 'connected') throw new Error('WhatsApp no conectado');
       // Enviar el mensaje de texto al JID (número@s.whatsapp.net).
       await sock.sendMessage(jid, { text });
+      lastSendTime = Date.now();
+      logEvent('send_ok', { jid: maskJid(jid), delay_ms: delayMs, text_len: text.length });
       resolve();
     } catch (err) {
+      lastSendTime = Date.now();
+      logEvent('send_fail', { jid: maskJid(jid), delay_ms: delayMs, error: err.message, text_len: text.length });
       // Propagar el error a quien llamó sendWhatsApp() para manejo en el sitio de llamada.
       reject(err);
     }
@@ -136,6 +172,16 @@ async function ensureTable() {
     CREATE TABLE IF NOT EXISTS whatsapp_auth (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    )
+  `).catch(() => {});
+
+  // Log de eventos para el reporte de diagnóstico de baneos (envíos, delays, desconexiones).
+  await pool._pool.query(`
+    CREATE TABLE IF NOT EXISTS whatsapp_events (
+      id SERIAL PRIMARY KEY,
+      ts TIMESTAMPTZ DEFAULT NOW(),
+      event VARCHAR(30) NOT NULL,
+      detail JSONB
     )
   `).catch(() => {});
 }
@@ -303,6 +349,7 @@ export async function connectWhatsApp() {
       qrBase64 = await QRCode.toDataURL(qr).catch(() => null);
       waStatus = 'qr';
       console.log('WhatsApp: QR generado — escanea desde el panel admin');
+      logEvent('qr_generated');
     }
 
     if (connection === 'open') {
@@ -311,6 +358,7 @@ export async function connectWhatsApp() {
       waStatus = 'connected';
       reconnectAttempts = 0;
       console.log('WhatsApp: conectado');
+      logEvent('connected');
     }
 
     if (connection === 'close') {
@@ -321,6 +369,7 @@ export async function connectWhatsApp() {
       waStatus = 'disconnected';
       sock = null; // Liberar la referencia al socket cerrado.
       console.log(`WhatsApp: desconectado (código ${code})`);
+      logEvent('disconnected', { code: code ?? null, logged_out: loggedOut, reconnect_attempt: reconnectAttempts });
 
       if (!loggedOut && reconnectAttempts < 5) {
         // Reconexión automática con backoff: 5 s, 10 s, 15 s… hasta máximo 30 s.

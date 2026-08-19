@@ -36,6 +36,9 @@ export default function AdminWhatsapp() {
   // para deshabilitar los botones y evitar solicitudes duplicadas
   const [loading, setLoading] = useState(false);
 
+  // Indica si se está generando/descargando el reporte de diagnóstico
+  const [reportLoading, setReportLoading] = useState(false);
+
   // ── Carga de estado ───────────────────────────────────────────────────────
 
   /**
@@ -92,6 +95,29 @@ export default function AdminWhatsapp() {
     setLoading(true);
     try { await api.post('/whatsapp/disconnect'); await load(); }
     finally { setLoading(false); }
+  };
+
+  /**
+   * downloadReport — descarga el reporte de diagnóstico (envíos, intervalos
+   * reales entre mensajes, desconexiones con código) como archivo .json,
+   * para poder estudiar el patrón que llevó a un baneo/desconexión.
+   */
+  const downloadReport = async () => {
+    setReportLoading(true);
+    try {
+      const data = await api.get('/whatsapp/report');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `whatsapp-reporte-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('No se pudo generar el reporte: ' + err.message);
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   // ── Metadatos visuales del estado actual ──────────────────────────────────
@@ -152,6 +178,16 @@ export default function AdminWhatsapp() {
             {/* Imagen del QR generada por el servidor (data URL o URL pública) */}
             <img src={qr} alt="QR WhatsApp" style={{ width: 220, height: 220, borderRadius: 12, border: '1px solid var(--border)' }} />
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>El QR se actualiza automáticamente</p>
+            {/* Botón de reporte de diagnóstico — descarga un .json con el historial
+                de envíos (intervalos reales) y desconexiones para estudiar baneos. */}
+            <button
+              className="btn btn-secondary"
+              onClick={downloadReport}
+              disabled={reportLoading}
+              style={{ fontSize: 13, marginTop: 16 }}
+            >
+              {reportLoading ? 'Generando reporte...' : 'Reporte'}
+            </button>
           </div>
         )}
 
@@ -161,7 +197,15 @@ export default function AdminWhatsapp() {
         {status === 'disconnected' && !qr && (
           <div className="card" style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}>
             <p style={{ fontWeight: 700, color: '#C2410C', marginBottom: 4 }}>WhatsApp desconectado</p>
-            <p style={{ fontSize: 13, color: '#9A3412' }}>Las notificaciones push siguen funcionando. Conecta WhatsApp para activar los mensajes adicionales.</p>
+            <p style={{ fontSize: 13, color: '#9A3412', marginBottom: 12 }}>Las notificaciones push siguen funcionando. Conecta WhatsApp para activar los mensajes adicionales.</p>
+            <button
+              className="btn btn-secondary"
+              onClick={downloadReport}
+              disabled={reportLoading}
+              style={{ fontSize: 13 }}
+            >
+              {reportLoading ? 'Generando reporte...' : 'Reporte'}
+            </button>
           </div>
         )}
       </div>

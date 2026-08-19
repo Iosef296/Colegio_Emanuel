@@ -41,25 +41,32 @@ console.log(`[DB] Primary: ${swap ? 'Supabase' : 'Neon'} | Secondary: ${swap ? '
 
 // --- Failover state ---
 let primaryOk = true;
+let recoveryInterval = null;
 const RETRY_INTERVAL_MS = 60_000;
 
+// Only probes primary while it's known to be down (recovery check).
+// Never pings on a schedule while healthy — that would keep Neon's
+// compute awake 24/7 and prevent scale-to-zero autosuspend.
 async function checkPrimary() {
   try {
     await primaryPool.query('SELECT 1');
-    if (!primaryOk) {
-      primaryOk = true;
-      console.log('[DB] Primary restored — switching back to Neon');
-    }
+    primaryOk = true;
+    console.log('[DB] Primary restored — switching back to Neon');
+    clearInterval(recoveryInterval);
+    recoveryInterval = null;
   } catch {
-    if (primaryOk) {
-      primaryOk = false;
-      console.error('[DB] Primary down, switching to secondary (Supabase)');
-    }
+    // still down — keep the recovery interval running
   }
 }
 
-// Probe primary every 60s to detect recovery
-setInterval(checkPrimary, RETRY_INTERVAL_MS);
+function markPrimaryDown() {
+  if (!primaryOk) return;
+  primaryOk = false;
+  console.error('[DB] Primary down, switching to secondary (Supabase)');
+  if (!recoveryInterval) {
+    recoveryInterval = setInterval(checkPrimary, RETRY_INTERVAL_MS);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Schema initialization for secondary (Supabase)
@@ -363,8 +370,7 @@ const pool = {
     } catch (err) {
       // If primary failed mid-query, mark it down and retry on secondary
       if (activePool === primaryPool && secondaryPool) {
-        primaryOk = false;
-        console.error('[DB] Primary query failed, switching to secondary:', err.message);
+        markPrimaryDown();
         result = await secondaryPool.query(pgSql, params);
       } else {
         throw err;
